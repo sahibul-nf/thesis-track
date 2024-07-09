@@ -9,7 +9,9 @@ import (
 
 var SupabaseClient *supabase.Client
 
-func ConnectSupabase(Config config.Config) {
+func ConnectSupabase() {
+	Config := config.GetConfig()
+
 	client, err := supabase.NewClient(
 		Config.SupabaseURL,
 		Config.SupabaseKey,

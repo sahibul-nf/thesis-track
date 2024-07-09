@@ -15,16 +15,24 @@ type Config struct {
 	SupabaseURL     string
 	SupabaseKey     string
 	SupabaseAnonKey string
+	JWTSecretKey    string
 }
 
-func LoadConfig() (config Config, err error) {
-	config = Config{}
+var config Config
+
+func GetConfig() Config {
+	return config
+}
+
+func LoadConfig() {
 	config.DBUser = os.Getenv("DB_USER")
 	config.DBPassword = os.Getenv("DB_PASSWORD")
 	config.DBHost = os.Getenv("DB_HOST")
 	config.DBPort = os.Getenv("DB_PORT")
 	config.DBName = os.Getenv("DB_NAME")
-	return config, nil
+	config.SupabaseURL = os.Getenv("SUPABASE_URL")
+	config.SupabaseKey = os.Getenv("SUPABASE_KEY")
+	config.JWTSecretKey = os.Getenv("JWT_SECRET_KEY")
 }
 
 func init() {

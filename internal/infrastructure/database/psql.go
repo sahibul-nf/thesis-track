@@ -10,7 +10,8 @@ import (
 
 var DB *gorm.DB
 
-func ConnectDB(Config config.Config) {
+func ConnectDB() {
+	Config := config.GetConfig()
 	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
 		Config.DBHost, Config.DBUser, Config.DBPassword, Config.DBName, Config.DBPort)
 

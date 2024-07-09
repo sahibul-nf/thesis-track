@@ -8,13 +8,10 @@ import (
 )
 
 func main() {
-	config, err := config.LoadConfig()
-	if err != nil {
-		log.Fatalf("Could not load config: %v", err)
-	}
+	config.LoadConfig()
 
-	database.ConnectDB(config)
-	database.ConnectSupabase(config)
+	database.ConnectDB()
+	database.ConnectSupabase()
 
 	app := server.NewServer()
 	log.Fatal(app.Listen(":3000"))

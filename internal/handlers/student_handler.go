@@ -3,12 +3,26 @@ package handlers
 import (
 	"thesis-track/internal/entities"
 	"thesis-track/internal/infrastructure/database"
+	"thesis-track/internal/middlewares"
 	"thesis-track/internal/repositories"
 	"thesis-track/internal/services"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 )
+
+func RegisterStudentRoutes(app *fiber.App) {
+	handler := NewStudentHandler(services.NewStudentService(repositories.NewStudentRepository(database.DB)))
+
+	jwt := middlewares.NewAuth()
+	app.Use(jwt)
+
+	app.Get("/students", handler.GetAllStudents)
+	app.Get("/students/:id", handler.GetStudentByID)
+	app.Post("/students", handler.CreateStudent)
+	app.Put("/students/:id", handler.UpdateStudent)
+	app.Delete("/students/:id", handler.DeleteStudent)
+}
 
 type StudentHandler struct {
 	studentService services.StudentService
@@ -66,14 +80,4 @@ func (h *StudentHandler) DeleteStudent(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 	}
 	return c.SendStatus(fiber.StatusNoContent)
-}
-
-func RegisterStudentRoutes(app *fiber.App) {
-	handler := NewStudentHandler(services.NewStudentService(repositories.NewStudentRepository(database.DB)))
-
-	app.Get("/students", handler.GetAllStudents)
-	app.Get("/students/:id", handler.GetStudentByID)
-	app.Post("/students", handler.CreateStudent)
-	app.Put("/students/:id", handler.UpdateStudent)
-	app.Delete("/students/:id", handler.DeleteStudent)
 }
