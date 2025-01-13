@@ -43,6 +43,22 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, thesisID uuid
 		return "", errors.New("thesis not found")
 	}
 
+	// Check supervisor approvals
+	supervisors := 0
+	approvedSupervisors := 0
+	for _, tl := range thesis.ThesisLectures {
+		if tl.Role == "Supervisor" {
+			supervisors++
+			if tl.ApprovedAt != nil {
+				approvedSupervisors++
+			}
+		}
+	}
+
+	if approvedSupervisors < supervisors {
+		return "", errors.New("all supervisors must approve before uploading draft document")
+	}
+
 	// Generate unique filename
 	ext := filepath.Ext(filename)
 	uniqueFilename := fmt.Sprintf("thesis/%s/draft_%s%s", thesisID, uuid.New().String(), ext)

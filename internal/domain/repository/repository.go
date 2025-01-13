@@ -50,7 +50,9 @@ type ProgressRepository interface {
 	Update(ctx context.Context, progress *entity.Progress) (*entity.Progress, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Progress, error)
-	FindByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.Progress, error)
+	FindAllByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.Progress, error)
+	FindAllByThesisIDAndLectureID(ctx context.Context, thesisID, lectureID uuid.UUID) ([]entity.Progress, error)
+	FindAllByThesisIDAndLectureIDAndStatus(ctx context.Context, thesisID, lectureID uuid.UUID, status string) ([]entity.Progress, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string, comment string) error
 }
 
@@ -61,6 +63,7 @@ type ThesisLectureRepository interface {
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.ThesisLecture, error)
 	FindByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.ThesisLecture, error)
 	FindByLectureID(ctx context.Context, lectureID uuid.UUID) ([]entity.ThesisLecture, error)
+	FindByThesisAndLecture(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error)
 } 
 
 type CommentRepository interface {

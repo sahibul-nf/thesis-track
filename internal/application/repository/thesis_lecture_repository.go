@@ -72,3 +72,14 @@ func (r *thesisLectureRepository) FindByLectureID(ctx context.Context, lectureID
 	}
 	return thesisLectures, nil
 } 
+
+func (r *thesisLectureRepository) FindByThesisAndLecture(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error) {
+	var thesisLecture entity.ThesisLecture
+	err := r.db.WithContext(ctx).
+		Where("thesis_id = ? AND lecture_id = ?", thesisID, lectureID).
+		First(&thesisLecture).Error
+	if err != nil {
+		return nil, err
+	}
+	return &thesisLecture, nil
+}

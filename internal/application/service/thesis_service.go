@@ -17,6 +17,7 @@ type thesisService struct {
 	thesisLectureRepo repository.ThesisLectureRepository
 	studentRepo      repository.StudentRepository
 	lectureRepo      repository.LectureRepository
+	progressRepo     repository.ProgressRepository
 }
 
 func NewThesisService(
@@ -24,10 +25,12 @@ func NewThesisService(
 	thesisLectureRepo repository.ThesisLectureRepository,
 	studentRepo repository.StudentRepository,
 	lectureRepo repository.LectureRepository,
+	progressRepo repository.ProgressRepository,
 ) service.ThesisService {
 	return &thesisService{
 		thesisRepo:       thesisRepo,
 		thesisLectureRepo: thesisLectureRepo,
+		progressRepo: progressRepo,
 		studentRepo:      studentRepo,
 		lectureRepo:      lectureRepo,
 	}
@@ -186,4 +189,75 @@ func (s *thesisService) assignLectureToThesis(ctx context.Context, thesisID, lec
 	}
 
 	return s.thesisLectureRepo.Create(ctx, thesisLecture)
+}
+
+func (s *thesisService) ApproveThesis(ctx context.Context, thesisID, supervisorID uuid.UUID) error {
+	// Check if thesis exists
+	thesis, err := s.thesisRepo.FindByID(ctx, thesisID)
+	if err != nil {
+		return err
+	}
+	if thesis == nil {
+		return errors.New("thesis not found")
+	}	
+
+	// Find ThesisLecture record
+	thesisLecture, err := s.thesisLectureRepo.FindByThesisAndLecture(ctx, thesisID, supervisorID)
+	if err != nil {
+		return err
+	}
+	if thesisLecture == nil || thesisLecture.Role != "Supervisor" {
+		return errors.New("only assigned supervisors can approve thesis")
+	}
+
+	// Check if all progress assigned to this supervisor has been reviewed
+	progresses, err := s.progressRepo.FindAllByThesisIDAndLectureID(ctx, thesisID, supervisorID)
+	if err != nil {
+		return err
+	}
+
+	// Supervisor must have at least one progress assigned to them
+	if len(progresses) == 0 {
+		return errors.New("supervisor must have at least one progress assigned to them")
+	}
+
+	// All progress must be reviewed
+	for _, progress := range progresses {
+		if progress.Status == "Pending" {
+			return errors.New("all progress must be reviewed before thesis can be approved")
+		}
+	}
+
+	// Set approval
+	now := time.Now()
+	thesisLecture.ApprovedAt = &now
+	err = s.thesisLectureRepo.Update(ctx, thesisLecture)
+	if err != nil {
+		return err
+	}
+
+	// Check if all supervisors have approved
+	thesisLectures, err := s.thesisLectureRepo.FindByThesisID(ctx, thesisID)
+	if err != nil {
+		return err
+	}
+
+	allApproved := true
+	for _, tl := range thesisLectures {
+		if tl.Role == "Supervisor" && tl.ApprovedAt == nil {
+			allApproved = false
+			break
+		}
+	}
+
+	// Update thesis status if all supervisors have approved
+	if allApproved {
+		thesis.Status = "Draft Ready"
+		err = s.thesisRepo.Update(ctx, thesis)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 } 

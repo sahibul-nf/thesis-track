@@ -46,7 +46,7 @@ func main() {
 	authService := service.NewAuthService(studentRepo, lectureRepo, adminRepo, supabase)
 	studentService := service.NewStudentService(studentRepo)
 	lectureService := service.NewLectureService(lectureRepo)
-	thesisService := service.NewThesisService(thesisRepo, thesisLectureRepo, studentRepo, lectureRepo)
+	thesisService := service.NewThesisService(thesisRepo, thesisLectureRepo, studentRepo, lectureRepo, progressRepo)
 	progressService := service.NewProgressService(progressRepo, thesisRepo, commentRepo, studentRepo, lectureRepo)
 	documentService := service.NewDocumentService(thesisRepo, progressRepo, supabase)
 	adminService := service.NewAdminService(adminRepo, studentRepo, lectureRepo, thesisRepo)

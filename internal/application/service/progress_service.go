@@ -90,7 +90,7 @@ func (s *progressService) GetProgressByID(ctx context.Context, id uuid.UUID) (*e
 }
 
 func (s *progressService) GetProgressesByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.Progress, error) {
-	return s.progressRepo.FindByThesisID(ctx, thesisID)
+	return s.progressRepo.FindAllByThesisID(ctx, thesisID)
 }
 
 func (s *progressService) ReviewProgress(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *dto.CommentRequest) (*dto.ReviewProgressResponse, error) {

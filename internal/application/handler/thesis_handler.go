@@ -243,6 +243,45 @@ func (h *ThesisHandler) AssignExaminer(c *fiber.Ctx) error {
 	})
 }
 
+// ApproveThesis handles supervisor's approval for a thesis
+func (h *ThesisHandler) ApproveThesis(c *fiber.Ctx) error {
+	thesisID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid thesis ID",
+		})
+	}
+
+	// Get supervisor ID from authenticated user
+	supervisorID := c.Locals("userID").(uuid.UUID)
+
+	err = h.thesisService.ApproveThesis(c.Context(), thesisID, supervisorID)
+	if err != nil {
+		if err.Error() == "only assigned supervisors can approve thesis" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		if err.Error() == "all progress must be reviewed before thesis can be approved" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		if err.Error() == "thesis not found" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "thesis approved successfully",
+	})
+}
+
 // RegisterRoutes registers all thesis routes
 func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	theses := app.Group("/theses")
@@ -257,6 +296,7 @@ func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	// Admin routes
 	theses.Post("/:id/supervisor/:lecture_id", h.authMiddleware.RequireAdmin(), h.AssignSupervisor)
 	theses.Post("/:id/examiner/:lecture_id", h.authMiddleware.RequireAdmin(), h.AssignExaminer)
+	theses.Post("/:id/approve", h.authMiddleware.RequireLecture(), h.ApproveThesis)
 	
 	// Routes accessible by all authenticated users
 	theses.Get("/", h.GetAllTheses)

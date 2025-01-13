@@ -63,7 +63,7 @@ func (r *progressRepository) FindByID(ctx context.Context, id uuid.UUID) (*entit
 	return &progress, nil
 }
 
-func (r *progressRepository) FindByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.Progress, error) {
+func (r *progressRepository) FindAllByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.Progress, error) {
 	var progresses []entity.Progress
 	err := r.db.WithContext(ctx).
 		Preload("Thesis").
@@ -71,6 +71,34 @@ func (r *progressRepository) FindByThesisID(ctx context.Context, thesisID uuid.U
 		Preload("Reviewer").
 		Where("thesis_id = ?", thesisID).
 		Order("created_at DESC").
+		Find(&progresses).Error
+	if err != nil {
+		return nil, err
+	}
+	return progresses, nil
+}
+
+func (r *progressRepository) FindAllByThesisIDAndLectureID(ctx context.Context, thesisID, lectureID uuid.UUID) ([]entity.Progress, error) {
+	var progresses []entity.Progress
+	err := r.db.WithContext(ctx).
+		Preload("Thesis").
+		Preload("Thesis.Student").
+		Preload("Reviewer").
+		Where("thesis_id = ? AND reviewer_id = ?", thesisID, lectureID).
+		Find(&progresses).Error
+	if err != nil {
+		return nil, err
+	}
+	return progresses, nil
+}
+
+func (r *progressRepository) FindAllByThesisIDAndLectureIDAndStatus(ctx context.Context, thesisID, lectureID uuid.UUID, status string) ([]entity.Progress, error) {
+	var progresses []entity.Progress
+	err := r.db.WithContext(ctx).
+		Preload("Thesis").
+		Preload("Thesis.Student").
+		Preload("Reviewer").
+		Where("thesis_id = ? AND reviewer_id = ? AND status = ?", thesisID, lectureID, status).
 		Find(&progresses).Error
 	if err != nil {
 		return nil, err

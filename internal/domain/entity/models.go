@@ -42,7 +42,7 @@ type Thesis struct {
 	Title            string     `json:"title" gorm:"not null"`
 	Abstract         string     `json:"abstract" gorm:"not null"`
 	ResearchField    string     `json:"research_field" gorm:"not null"`
-	Status           string     `json:"status" gorm:"default:Proposed"` // Proposed, In Progress, Completed
+	Status           string     `json:"status" gorm:"default:Proposed"` // Proposed, In Progress, Draft Ready, Completed
 	SubmissionDate   time.Time  `json:"submission_date" gorm:"not null"`
 	CompletedDate    *time.Time `json:"completed_date,omitempty"`
 	DraftDocumentURL string     `json:"draft_document_url"`
@@ -91,7 +91,8 @@ type ThesisLecture struct {
 	ID        uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
 	ThesisID  uuid.UUID `json:"thesis_id" gorm:"not null"`
 	LectureID uuid.UUID `json:"lecture_id" gorm:"not null"`
-	Role      string    `json:"role" gorm:"not null"` // Supervisor, Examiner
+	Role      string    `json:"role" gorm:"default:Supervisor"`  // Supervisor, Examiner
+	ApprovedAt *time.Time `json:"approved_at"`                    // Null jika belum di-approve
 
 	// Relations
 	Thesis  Thesis  `json:"thesis" gorm:"foreignKey:ThesisID"`
