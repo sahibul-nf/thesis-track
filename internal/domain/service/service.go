@@ -55,6 +55,7 @@ type ProgressService interface {
 	DeleteProgress(ctx context.Context, id uuid.UUID) error
 	GetProgressByID(ctx context.Context, id uuid.UUID) (*entity.Progress, error)
 	GetProgressesByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.Progress, error)
+	GetProgressesByThesisIDAndLectureID(ctx context.Context, thesisID, lectureID uuid.UUID) ([]entity.Progress, error)
 	ReviewProgress(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *dto.CommentRequest) (*dto.ReviewProgressResponse, error)
 	AddComment(ctx context.Context, progressID uuid.UUID, userID uuid.UUID, req *dto.CommentRequest) (*entity.Comment, error)
 	GetCommentsByProgress(ctx context.Context, progressID uuid.UUID) ([]entity.Comment, error)

@@ -358,6 +358,22 @@ Assign a supervisor to a thesis.
 }
 ```
 
+### Approve Thesis
+
+Approve a thesis. This indicates supervisor's think that the thesis is ready to be examined.
+
+**Endpoint**: `POST /theses/{id}/approve`
+
+**Auth**: Required (Lecture)
+
+**Response (200)**:
+
+```json
+{
+  "message": "thesis approved successfully"
+}
+```
+
 ## Progress Management
 
 ### Add Progress
@@ -448,6 +464,43 @@ Get all progresses by thesis ID.
 **Endpoint**: `GET /progress/thesis/{thesisId}`
 
 **Auth**: Required (Admin/Lecture/Student)
+
+**Response (200)**:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "thesis_id": "uuid",
+      "reviewer_id": "uuid",
+      "progress_description": "string",
+      "document_url": "string",
+      "status": "string",
+      "achievement_date": "timestamp",
+      "created_at": "timestamp",
+      "updated_at": "timestamp",
+      "reviewer": {
+        "id": "uuid",
+        "name": "string",
+        "nidn": "string",
+        "email": "string",
+        "department": "string",
+        "created_at": "timestamp",
+        "updated_at": "timestamp"
+      }
+    }
+  ]
+}
+```
+
+### Get Progresses By Reviewer
+
+Get all progresses by reviewer ID.
+
+**Endpoint**: `GET /progress/thesis/{thesisId}/assignee`
+
+**Auth**: Required (Admin/Lecture)
 
 **Response (200)**:
 

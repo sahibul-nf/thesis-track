@@ -93,6 +93,10 @@ func (s *progressService) GetProgressesByThesisID(ctx context.Context, thesisID 
 	return s.progressRepo.FindAllByThesisID(ctx, thesisID)
 }
 
+func (s *progressService) GetProgressesByThesisIDAndLectureID(ctx context.Context, thesisID, lectureID uuid.UUID) ([]entity.Progress, error) {
+	return s.progressRepo.FindAllByThesisIDAndLectureID(ctx, thesisID, lectureID)
+}
+
 func (s *progressService) ReviewProgress(ctx context.Context, id uuid.UUID, userID uuid.UUID, req *dto.CommentRequest) (*dto.ReviewProgressResponse, error) {
 	// Check if progress exists
 	progress, err := s.progressRepo.FindByID(ctx, id)

@@ -147,6 +147,29 @@ func (h *ProgressHandler) GetProgressesByThesis(c *fiber.Ctx) error {
 	})
 }
 
+/// GetAssignedProgresses returns all progress assigned to a lecturer
+func (h *ProgressHandler) GetAssignedProgresses(c *fiber.Ctx) error {
+	thesisID, err := uuid.Parse(c.Params("thesisId"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid thesis ID",
+		})
+	}
+
+	lectureID := c.Locals("userID").(uuid.UUID)
+
+	progresses, err := h.progressService.GetProgressesByThesisIDAndLectureID(c.Context(), thesisID, lectureID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"data": progresses,
+	})
+}
+
 // UpdateProgress updates a progress
 func (h *ProgressHandler) UpdateProgress(c *fiber.Ctx) error {
 	id, err := uuid.Parse(c.Params("id"))
@@ -300,6 +323,7 @@ func (h *ProgressHandler) RegisterRoutes(app fiber.Router) {
 
 	// Lecture routes
 	progress.Post("/:id/review", h.authMiddleware.RequireLecture(), middleware.ValidateRequest(&dto.CommentRequest{}), h.ReviewProgress)
+	progress.Get("/thesis/:thesisId/assignee", h.authMiddleware.RequireLecture(), h.GetAssignedProgresses)
 
 	// Routes accessible by all authenticated users
 	progress.Get("/:id", h.GetProgressByID)
