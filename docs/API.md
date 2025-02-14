@@ -734,8 +734,7 @@ Upload a thesis draft document.
 **Response (200)**:
 
 ```json
-{
-  "message": "draft document uploaded successfully",
+{  
   "url": "string"
 }
 ```
@@ -756,7 +755,6 @@ Upload a thesis final document.
 
 ```json
 {
-  "message": "final document uploaded successfully",
   "url": "string"
 }
 ```
@@ -777,7 +775,6 @@ Upload a progress document.
 
 ```json
 {
-  "message": "progress document uploaded successfully",
   "url": "string"
 }
 ```

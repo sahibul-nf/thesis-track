@@ -105,7 +105,7 @@ func ConnectDB() (*gorm.DB, error) {
 
 func ConnectSupabase() (*supabase.Client, error) {
 	// Initialize Supabase client
-	supabaseClient, err := supabase.NewClient(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_KEY"), &supabase.ClientOptions{})
+	supabaseClient, err := supabase.NewClient(os.Getenv("SUPABASE_URL"), os.Getenv("SUPABASE_SERVICE_ROLE_KEY"), &supabase.ClientOptions{})
 	if err != nil {
 		log.Fatal("Failed to connect to Supabase:", err)
 	}

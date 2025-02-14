@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"path/filepath"
 	"thesis-track/internal/application/middleware"
 	"thesis-track/internal/domain/service"
 
@@ -37,28 +38,25 @@ func (h *DocumentHandler) UploadDraftDocument(c *fiber.Ctx) error {
 			"error": "invalid thesis ID",
 		})
 	}
-
-	// Check if thesis exists and user owns it
-	thesis, err := h.thesisService.GetThesisByID(c.Context(), thesisID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "thesis not found",
-		})
-	}
-
-	// Verify ownership
-	userID := c.Locals("userID").(uuid.UUID)
-	if thesis.StudentID != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "you can only upload documents to your own thesis",
-		})
-	}
-
+	
 	// Get file from request
 	file, err := c.FormFile("document")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "no document provided",
+		})
+	}
+
+	if file.Size > 10*1024*1024 { // 10MB
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "file size exceeds 10MB limit",
+		})
+	}
+
+	// Verify file type (PDF)
+	if filepath.Ext(file.Filename) != ".pdf" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "only PDF files are allowed",
 		})
 	}
 
@@ -80,16 +78,23 @@ func (h *DocumentHandler) UploadDraftDocument(c *fiber.Ctx) error {
 		})
 	}
 
+	userID := c.Locals("userID").(uuid.UUID)
+
 	// Upload document
-	documentURL, err := h.documentService.UploadDraftDocument(c.Context(), thesisID, buffer, file.Filename)
+	documentURL, err := h.documentService.UploadDraftDocument(c.Context(), userID, thesisID, buffer, file.Filename)
 	if err != nil {
+		if err.Error() == "you can only upload documents to your own thesis" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "draft document uploaded successfully",
 		"url":     documentURL,
 	})
 }
@@ -103,27 +108,24 @@ func (h *DocumentHandler) UploadFinalDocument(c *fiber.Ctx) error {
 		})
 	}
 
-	// Check if thesis exists and user owns it
-	thesis, err := h.thesisService.GetThesisByID(c.Context(), thesisID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "thesis not found",
-		})
-	}
-
-	// Verify ownership
-	userID := c.Locals("userID").(uuid.UUID)
-	if thesis.StudentID != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "you can only upload documents to your own thesis",
-		})
-	}
-
 	// Get file from request
 	file, err := c.FormFile("document")
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "no document provided",
+		})
+	}
+
+	if file.Size > 10*1024*1024 { // 10MB
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "file size exceeds 10MB limit",
+		})
+	}
+
+	// Verify file type (PDF)
+	if filepath.Ext(file.Filename) != ".pdf" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "only PDF files are allowed",
 		})
 	}
 
@@ -145,92 +147,98 @@ func (h *DocumentHandler) UploadFinalDocument(c *fiber.Ctx) error {
 		})
 	}
 
+	userID := c.Locals("userID").(uuid.UUID)
+
 	// Upload document
-	documentURL, err := h.documentService.UploadFinalDocument(c.Context(), thesisID, buffer, file.Filename)
+	documentURL, err := h.documentService.UploadFinalDocument(c.Context(), userID, thesisID, buffer, file.Filename)
 	if err != nil {
+		if err.Error() == "you can only upload documents to your own thesis" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
 	}
 
 	return c.JSON(fiber.Map{
-		"message": "final document uploaded successfully",
 		"url":     documentURL,
 	})
 }
 
 // UploadProgressDocument handles progress document upload
-func (h *DocumentHandler) UploadProgressDocument(c *fiber.Ctx) error {
-	progressID, err := uuid.Parse(c.Params("progressId"))
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "invalid progress ID",
-		})
-	}
+// func (h *DocumentHandler) UploadProgressDocument(c *fiber.Ctx) error {
+// 	progressID, err := uuid.Parse(c.Params("progressId"))
+// 	if err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"error": "invalid progress ID",
+// 		})
+// 	}
 
-	// Check if progress exists
-	progress, err := h.progressService.GetProgressByID(c.Context(), progressID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "progress not found",
-		})
-	}
+// 	// Check if progress exists
+// 	progress, err := h.progressService.GetProgressByID(c.Context(), progressID)
+// 	if err != nil {
+// 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+// 			"error": "progress not found",
+// 		})
+// 	}
 
-	// Check if thesis exists and user owns it
-	thesis, err := h.thesisService.GetThesisByID(c.Context(), progress.ThesisID)
-	if err != nil {
-		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-			"error": "thesis not found",
-		})
-	}
+// 	// Check if thesis exists and user owns it
+// 	thesis, err := h.thesisService.GetThesisByID(c.Context(), progress.ThesisID)
+// 	if err != nil {
+// 		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+// 			"error": "thesis not found",
+// 		})
+// 	}
 
-	// Verify ownership
-	userID := c.Locals("userID").(uuid.UUID)
-	if thesis.StudentID != userID {
-		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-			"error": "you can only upload documents to your own progress",
-		})
-	}
+// 	// Verify ownership
+// 	userID := c.Locals("userID").(uuid.UUID)
+// 	if thesis.StudentID != userID {
+// 		return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+// 			"error": "you can only upload documents to your own progress",
+// 		})
+// 	}
 
-	// Get file from request
-	file, err := c.FormFile("document")
-	if err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "no document provided",
-		})
-	}
+// 	// Get file from request
+// 	file, err := c.FormFile("document")
+// 	if err != nil {
+// 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+// 			"error": "no document provided",
+// 		})
+// 	}
 
-	// Read file
-	fileContent, err := file.Open()
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to read document",
-		})
-	}
-	defer fileContent.Close()
+// 	// Read file
+// 	fileContent, err := file.Open()
+// 	if err != nil {
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"error": "failed to read document",
+// 		})
+// 	}
+// 	defer fileContent.Close()
 
-	// Read file bytes
-	buffer := make([]byte, file.Size)
-	_, err = fileContent.Read(buffer)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "failed to read document",
-		})
-	}
+// 	// Read file bytes
+// 	buffer := make([]byte, file.Size)
+// 	_, err = fileContent.Read(buffer)
+// 	if err != nil {
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"error": "failed to read document",
+// 		})
+// 	}
 
-	// Upload document
-	documentURL, err := h.documentService.UploadProgressDocument(c.Context(), progressID, buffer, file.Filename)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
+// 	// Upload document
+// 	documentURL, err := h.documentService.UploadProgressDocument(c.Context(), progressID, buffer, file.Filename)
+// 	if err != nil {
+// 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+// 			"error": err.Error(),
+// 		})
+// 	}
 
-	return c.JSON(fiber.Map{
-		"message": "progress document uploaded successfully",
-		"url":     documentURL,
-	})
-}
+// 	return c.JSON(fiber.Map{
+// 		"url":     documentURL,
+// 	})
+// }
 
 // RegisterRoutes registers all document routes
 func (h *DocumentHandler) RegisterRoutes(app fiber.Router) {
@@ -242,5 +250,5 @@ func (h *DocumentHandler) RegisterRoutes(app fiber.Router) {
 	// Student routes
 	documents.Post("/thesis/:thesisId/draft", h.authMiddleware.RequireStudent(), h.UploadDraftDocument)
 	documents.Post("/thesis/:thesisId/final", h.authMiddleware.RequireStudent(), h.UploadFinalDocument)
-	documents.Post("/progress/:progressId", h.authMiddleware.RequireStudent(), h.UploadProgressDocument)
-} 
+	// documents.Post("/progress/:progressId", h.authMiddleware.RequireStudent(), h.UploadProgressDocument)
+}

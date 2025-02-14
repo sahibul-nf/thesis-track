@@ -7,6 +7,16 @@ import (
 	"github.com/google/uuid"
 )
 
+type ThesisStatus string
+
+const (
+	Proposed    ThesisStatus = "Proposed" // meaning the thesis is proposed by student
+	InProgress  ThesisStatus = "In Progress" // meaning the thesis is in progress by student
+	DraftReady  ThesisStatus = "Draft Ready" // meaning the thesis is approved/ACC. by supervisor and ready to be reviewed by examiner
+	UnderReview ThesisStatus = "Under Review" // meaning the student has submitted the final thesis document after revision expected by examiner and waiting for review by admin
+	Completed   ThesisStatus = "Completed" // meaning the thesis is already approved by admin and marked as completed (final state)
+)
+
 type Student struct {
 	ID         uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`
 	Name       string    `json:"name"`

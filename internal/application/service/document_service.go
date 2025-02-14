@@ -10,6 +10,7 @@ import (
 	"thesis-track/internal/domain/repository"
 	"thesis-track/internal/domain/service"
 
+	storage_go "github.com/supabase-community/storage-go"
 	"github.com/supabase-community/supabase-go"
 
 	"github.com/google/uuid"
@@ -33,7 +34,7 @@ func NewDocumentService(
 	}
 }
 
-func (s *documentService) UploadDraftDocument(ctx context.Context, thesisID uuid.UUID, file []byte, filename string) (string, error) {
+func (s *documentService) UploadDraftDocument(ctx context.Context, userID, thesisID uuid.UUID, file []byte, filename string) (string, error) {
 	// Check if thesis exists
 	thesis, err := s.thesisRepo.FindByID(ctx, thesisID)
 	if err != nil {
@@ -41,6 +42,11 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, thesisID uuid
 	}
 	if thesis == nil {
 		return "", errors.New("thesis not found")
+	}
+
+	// Verify ownership
+	if thesis.StudentID != userID {
+		return "", errors.New("you can only upload documents to your own thesis")
 	}
 
 	// Check supervisor approvals
@@ -62,9 +68,13 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, thesisID uuid
 	// Generate unique filename
 	ext := filepath.Ext(filename)
 	uniqueFilename := fmt.Sprintf("thesis/%s/draft_%s%s", thesisID, uuid.New().String(), ext)
+	
+	types := "application/pdf"
 
 	// Upload to Supabase Storage
-	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file))
+	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file), storage_go.FileOptions{
+		ContentType: &types,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload document: %w", err)
 	}
@@ -82,7 +92,7 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, thesisID uuid
 	return publicURL, nil
 }
 
-func (s *documentService) UploadFinalDocument(ctx context.Context, thesisID uuid.UUID, file []byte, filename string) (string, error) {
+func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesisID uuid.UUID, file []byte, filename string) (string, error) {
 	// Check if thesis exists
 	thesis, err := s.thesisRepo.FindByID(ctx, thesisID)
 	if err != nil {
@@ -101,8 +111,12 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, thesisID uuid
 	ext := filepath.Ext(filename)
 	uniqueFilename := fmt.Sprintf("thesis/%s/final_%s%s", thesisID, uuid.New().String(), ext)
 
+	types := "application/pdf"
+
 	// Upload to Supabase Storage
-	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file))
+	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file), storage_go.FileOptions{
+		ContentType: &types,
+	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload document: %w", err)
 	}
