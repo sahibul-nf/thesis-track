@@ -243,7 +243,7 @@ func (h *ThesisHandler) AssignExaminer(c *fiber.Ctx) error {
 	})
 }
 
-// ApproveThesis handles supervisor's approval for a thesis
+// ApproveThesis handles supervisor's or examiner's approval for a thesis
 func (h *ThesisHandler) ApproveThesis(c *fiber.Ctx) error {
 	thesisID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
@@ -253,12 +253,12 @@ func (h *ThesisHandler) ApproveThesis(c *fiber.Ctx) error {
 	}
 
 	// Get supervisor ID from authenticated user
-	supervisorID := c.Locals("userID").(uuid.UUID)
+	lectureID := c.Locals("userID").(uuid.UUID)
 
-	err = h.thesisService.ApproveThesis(c.Context(), thesisID, supervisorID)
+	err = h.thesisService.ApproveThesis(c.Context(), thesisID, lectureID)
 	if err != nil {
-		if err.Error() == "only assigned supervisors can approve thesis" {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+		if err.Error() == "lecture not assigned to this thesis" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		}
@@ -269,6 +269,16 @@ func (h *ThesisHandler) ApproveThesis(c *fiber.Ctx) error {
 		}
 		if err.Error() == "thesis not found" {
 			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		if err.Error() == "lecture must have at least one progress assigned to them" {
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+				"error": err.Error(),
+			})
+		}
+		if err.Error() == "only supervisors and examiners can approve thesis" {
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
 				"error": err.Error(),
 			})
 		}

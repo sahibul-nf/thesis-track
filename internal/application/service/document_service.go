@@ -102,9 +102,27 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesi
 		return "", errors.New("thesis not found")
 	}
 
-	// Check if thesis is completed
-	if thesis.Status != "Completed" {
-		return "", errors.New("cannot upload final document for non-completed thesis")
+	//* This has been handled in the thesis service in the approve thesis function
+	// // Check examiner approvals
+	// examines := 0
+	// approvedExamines := 0
+	// for _, tl := range thesis.ThesisLectures {
+	// 	if tl.Role == "Examiner" {
+	// 		examines++
+	// 		if tl.ApprovedAt != nil {
+	// 			approvedExamines++
+	// 		}
+	// 	}
+	// }
+
+	// if approvedExamines < examines {
+	// 	return "", errors.New("all examiners must approve before uploading final document")
+	// }
+	//* End of examiner approvals check
+
+	// Check if thesis is in Under Review status
+	if thesis.Status != "Under Review" {
+		return "", errors.New("final document can only be uploaded when thesis is in Under Review status")
 	}
 
 	// Generate unique filename

@@ -46,7 +46,7 @@ type ThesisService interface {
 	UpdateThesisStatus(ctx context.Context, id uuid.UUID, status string) error
 	AssignSupervisor(ctx context.Context, thesisID, lectureID uuid.UUID) error
 	AssignExaminer(ctx context.Context, thesisID, lectureID uuid.UUID) error
-	ApproveThesis(ctx context.Context, thesisID, supervisorID uuid.UUID) error
+	ApproveThesis(ctx context.Context, thesisID, lectureID uuid.UUID) error
 }
 
 type ProgressService interface {
