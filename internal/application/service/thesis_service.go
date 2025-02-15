@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"thesis-track/internal/domain/entity"
@@ -106,13 +107,9 @@ func (s *thesisService) GetAllTheses(ctx context.Context) ([]entity.Thesis, erro
 
 func (s *thesisService) UpdateThesisStatus(ctx context.Context, id uuid.UUID, status string) error {
 	// Validate status
-	validStatuses := map[string]bool{
-		"Proposed":    true,
-		"In Progress": true,
-		"Completed":   true,
-	}
+	validStatuses := entity.ThesisStatuses
 
-	if !validStatuses[status] {
+	if !slices.Contains(validStatuses, entity.ThesisStatus(status)) {
 		return errors.New("invalid thesis status")
 	}
 

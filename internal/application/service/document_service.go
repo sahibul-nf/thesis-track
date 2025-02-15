@@ -67,13 +67,15 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, userID, thesi
 
 	// Generate unique filename
 	ext := filepath.Ext(filename)
-	uniqueFilename := fmt.Sprintf("thesis/%s/draft_%s%s", thesisID, uuid.New().String(), ext)
+	uniqueFilename := fmt.Sprintf("thesis/%s/draft_%s%s", thesisID, userID, ext)
 	
 	types := "application/pdf"
+	upsert := true
 
 	// Upload to Supabase Storage
 	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file), storage_go.FileOptions{
 		ContentType: &types,
+		Upsert: &upsert,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload document: %w", err)
@@ -127,13 +129,15 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesi
 
 	// Generate unique filename
 	ext := filepath.Ext(filename)
-	uniqueFilename := fmt.Sprintf("thesis/%s/final_%s%s", thesisID, uuid.New().String(), ext)
+	uniqueFilename := fmt.Sprintf("thesis/%s/final_%s%s", thesisID, userID, ext)
 
 	types := "application/pdf"
-
+	upsert := true
+	
 	// Upload to Supabase Storage
 	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file), storage_go.FileOptions{
 		ContentType: &types,
+		Upsert: &upsert,
 	})
 	if err != nil {
 		return "", fmt.Errorf("failed to upload document: %w", err)

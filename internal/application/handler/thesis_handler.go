@@ -292,6 +292,42 @@ func (h *ThesisHandler) ApproveThesis(c *fiber.Ctx) error {
 	})
 }
 
+// MarkAsCompleted handles marking a thesis as completed by admin
+func (h *ThesisHandler) MarkAsCompleted(c *fiber.Ctx) error {
+	thesisID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid thesis ID",
+		})
+	}
+
+	// Check if thesis is in Under Review status
+	thesis, err := h.thesisService.GetThesisByID(c.Context(), thesisID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	if thesis.Status != "Under Review" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "thesis must be in Under Review status to be marked as completed",
+		})
+	}
+
+	// Update thesis status to Completed
+	err = h.thesisService.UpdateThesisStatus(c.Context(), thesisID, string(entity.Completed))
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "thesis marked as completed successfully",
+	})
+}
+
 // RegisterRoutes registers all thesis routes
 func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	theses := app.Group("/theses")
@@ -306,7 +342,7 @@ func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	// Admin routes
 	theses.Post("/:id/supervisor/:lecture_id", h.authMiddleware.RequireAdmin(), h.AssignSupervisor)
 	theses.Post("/:id/examiner/:lecture_id", h.authMiddleware.RequireAdmin(), h.AssignExaminer)
-	theses.Post("/:id/approve", h.authMiddleware.RequireLecture(), h.ApproveThesis)
+	theses.Post("/:id/complete", h.authMiddleware.RequireAdmin(), h.MarkAsCompleted)
 	
 	// Routes accessible by all authenticated users
 	theses.Get("/", h.GetAllTheses)

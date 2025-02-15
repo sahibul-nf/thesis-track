@@ -13,9 +13,17 @@ const (
 	Proposed    ThesisStatus = "Proposed" // meaning the thesis is proposed by student
 	InProgress  ThesisStatus = "In Progress" // meaning the thesis is in progress by student
 	DraftReady  ThesisStatus = "Draft Ready" // meaning the thesis is approved/ACC. by supervisor and ready to be reviewed by examiner
-	UnderReview ThesisStatus = "Under Review" // meaning the student has submitted the final thesis document after revision expected by examiner and waiting for review by admin
-	Completed   ThesisStatus = "Completed" // meaning the thesis is already approved by admin and marked as completed (final state)
+	UnderReview ThesisStatus = "Under Review" // meaning the examiner has reviewed the thesis and it is under review by admin with the student should upload the final document
+	Completed   ThesisStatus = "Completed" // meaning the thesis is already approved/archived by admin and marked as completed (final state)
 )
+
+var ThesisStatuses = []ThesisStatus{
+	Proposed,
+	InProgress,
+	DraftReady,
+	UnderReview,
+	Completed,
+}
 
 type Student struct {
 	ID         uuid.UUID `json:"id" gorm:"type:uuid;primary_key;default:uuid_generate_v4()"`

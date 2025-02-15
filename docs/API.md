@@ -360,7 +360,7 @@ Assign a supervisor to a thesis.
 
 ### Approve Thesis
 
-Approve a thesis. This indicates supervisor's think that the thesis is ready to be examined.
+Approve a thesis. This indicates supervisor's think that the thesis is ready to be examined or examiner's think that the thesis is ready to be approved by admin.
 
 **Endpoint**: `POST /theses/{id}/approve`
 
@@ -373,6 +373,23 @@ Approve a thesis. This indicates supervisor's think that the thesis is ready to 
   "message": "thesis approved successfully"
 }
 ```
+
+### Mark As Completed
+
+Mark a thesis as completed. This indicates that the thesis is approved by admin.
+
+**Endpoint**: `POST /theses/{id}/complete`
+
+**Auth**: Required (Admin)
+
+**Response (200)**:
+
+```json
+{
+  "message": "thesis marked as completed successfully"
+}
+```
+
 
 ## Progress Management
 
@@ -716,6 +733,7 @@ Add a new comment to a progress.
 	}
 }
 ```
+
 
 ## Document Management
 
