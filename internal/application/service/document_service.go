@@ -133,7 +133,7 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesi
 
 	types := "application/pdf"
 	upsert := true
-	
+
 	// Upload to Supabase Storage
 	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file), storage_go.FileOptions{
 		ContentType: &types,
@@ -151,39 +151,6 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesi
 	err = s.thesisRepo.Update(ctx, thesis)
 	if err != nil {
 		return "", fmt.Errorf("failed to update thesis with document URL: %w", err)
-	}
-
-	return publicURL, nil
-}
-
-func (s *documentService) UploadProgressDocument(ctx context.Context, progressID uuid.UUID, file []byte, filename string) (string, error) {
-	// Check if progress exists
-	progress, err := s.progressRepo.FindByID(ctx, progressID)
-	if err != nil {
-		return "", err
-	}
-	if progress == nil {
-		return "", errors.New("progress not found")
-	}
-
-	// Generate unique filename
-	ext := filepath.Ext(filename)
-	uniqueFilename := fmt.Sprintf("progress/%s/document_%s%s", progressID, uuid.New().String(), ext)
-
-	// Upload to Supabase Storage
-	_, err = s.supabase.Storage.UploadFile("documents", uniqueFilename, bytes.NewReader(file))
-	if err != nil {
-		return "", fmt.Errorf("failed to upload document: %w", err)
-	}
-
-	// Get public URL
-	publicURL := s.supabase.Storage.GetPublicUrl("documents", uniqueFilename).SignedURL
-
-	// Update progress with document URL
-	progress.DocumentURL = publicURL
-	_, err = s.progressRepo.Update(ctx, progress)
-	if err != nil {
-		return "", fmt.Errorf("failed to update progress with document URL: %w", err)
 	}
 
 	return publicURL, nil

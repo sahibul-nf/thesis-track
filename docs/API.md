@@ -777,36 +777,6 @@ Upload a thesis final document.
 }
 ```
 
-### Upload Progress Document
-
-Upload a progress document.
-
-**Endpoint**: `POST /documents/progress/{progressId}`
-
-**Auth**: Required (Student)
-
-**Request Body**: multipart/form-data
-
-- document: file (PDF, max 10MB)
-
-**Response (200)**:
-
-```json
-{
-  "url": "string"
-}
-```
-
-## Error Responses
-
-All error responses follow this format:
-
-```json
-{
-  "error": "error message"
-}
-```
-
 ### Common Error Status Codes
 
 - **400 Bad Request**: Invalid input data

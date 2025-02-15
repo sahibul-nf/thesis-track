@@ -64,7 +64,6 @@ type ProgressService interface {
 type DocumentService interface {
 	UploadDraftDocument(ctx context.Context, userID, thesisID uuid.UUID, file []byte, filename string) (string, error)
 	UploadFinalDocument(ctx context.Context, userID, thesisID uuid.UUID, file []byte, filename string) (string, error)
-	UploadProgressDocument(ctx context.Context, progressID uuid.UUID, file []byte, filename string) (string, error)
 	GetDocumentURL(ctx context.Context, path string) (string, error)
 }
 
