@@ -21,11 +21,20 @@ func NewThesisRepository(db *gorm.DB) repository.ThesisRepository {
 	}
 }
 
-func (r *thesisRepository) Create(ctx context.Context, thesis *entity.Thesis) error {
+func (r *thesisRepository) Create(ctx context.Context, thesis *entity.Thesis) (*entity.Thesis, error) {
 	if err := r.db.WithContext(ctx).Create(thesis).Error; err != nil {
-		return err
+		return nil, err
 	}
-	return r.db.WithContext(ctx).Preload("Student").First(thesis, thesis.ID).Error
+
+	// Reload the thesis with all relationships
+	if err := r.db.WithContext(ctx).
+		Preload("Student").
+		Preload("Supervisor").
+		First(thesis, thesis.ID).Error; err != nil {
+		return nil, err
+	}
+
+	return thesis, nil
 }
 
 func (r *thesisRepository) Update(ctx context.Context, thesis *entity.Thesis) error {
@@ -40,6 +49,7 @@ func (r *thesisRepository) FindByID(ctx context.Context, id uuid.UUID) (*entity.
 	var thesis entity.Thesis
 	err := r.db.WithContext(ctx).
 		Preload("Student").
+		Preload("Supervisor").
 		Preload("ThesisLectures").
 		Preload("ThesisLectures.Lecture").
 		First(&thesis, id).Error
@@ -56,6 +66,7 @@ func (r *thesisRepository) FindByStudentID(ctx context.Context, studentID uuid.U
 	var theses []entity.Thesis
 	err := r.db.WithContext(ctx).
 		Preload("Student").
+		Preload("Supervisor").
 		Preload("ThesisLectures").
 		Preload("ThesisLectures.Lecture").
 		Where("student_id = ?", studentID).
@@ -73,6 +84,7 @@ func (r *thesisRepository) FindAll(ctx context.Context) ([]entity.Thesis, error)
 	var theses []entity.Thesis
 	err := r.db.WithContext(ctx).
 		Preload("Student").
+		Preload("Supervisor").
 		Preload("ThesisLectures").
 		Preload("ThesisLectures.Lecture").
 		Find(&theses).Error

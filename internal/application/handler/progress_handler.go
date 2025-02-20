@@ -13,17 +13,20 @@ type ProgressHandler struct {
 	progressService service.ProgressService
 	thesisService  service.ThesisService
 	authMiddleware *middleware.AuthMiddleware
+	emailService service.EmailService
 }
 
 func NewProgressHandler(
 	progressService service.ProgressService,
 	thesisService service.ThesisService,
 	authMiddleware *middleware.AuthMiddleware,
+	emailService service.EmailService,
 ) *ProgressHandler {
 	return &ProgressHandler{
 		progressService: progressService,
 		thesisService:  thesisService,
 		authMiddleware: authMiddleware,
+		emailService: emailService,
 	}
 }
 
@@ -99,6 +102,18 @@ func (h *ProgressHandler) AddProgress(c *fiber.Ctx) error {
 			})
 		}
 	}
+
+	// student := fmt.Sprintf("%s (%s)", thesis.Student.Name, thesis.Student.NIM)
+	// to := progress.Reviewer.Email
+	// title := fmt.Sprintf("%s of %s", progress.ProgressDescription, thesis.Title)
+
+	// // Send email notification to reviewer
+	// err = h.emailService.SendProgressSubmissionNotification(c.Context(), to, student, title)
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"error": "failed to send email notification to supervisor: " + err.Error(),
+	// 	})
+	// }
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"data": progress,

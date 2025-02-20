@@ -36,7 +36,7 @@ type AdminRepository interface {
 } 
 
 type ThesisRepository interface {
-	Create(ctx context.Context, thesis *entity.Thesis) error
+	Create(ctx context.Context, thesis *entity.Thesis) (*entity.Thesis, error)
 	Update(ctx context.Context, thesis *entity.Thesis) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Thesis, error)
@@ -57,7 +57,7 @@ type ProgressRepository interface {
 }
 
 type ThesisLectureRepository interface {
-	Create(ctx context.Context, thesisLecture *entity.ThesisLecture) error
+	Create(ctx context.Context, thesisLecture *entity.ThesisLecture) (*entity.ThesisLecture, error)
 	Update(ctx context.Context, thesisLecture *entity.ThesisLecture) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.ThesisLecture, error)

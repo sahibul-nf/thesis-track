@@ -5,7 +5,6 @@ import (
 	"thesis-track/internal/domain/dto"
 	"thesis-track/internal/domain/entity"
 	"thesis-track/internal/domain/service"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -14,17 +13,19 @@ import (
 type ThesisHandler struct {
 	thesisService  service.ThesisService
 	authMiddleware *middleware.AuthMiddleware
+	emailService   service.EmailService
 }
 
-func NewThesisHandler(thesisService service.ThesisService, authMiddleware *middleware.AuthMiddleware) *ThesisHandler {
+func NewThesisHandler(thesisService service.ThesisService, authMiddleware *middleware.AuthMiddleware, emailService service.EmailService) *ThesisHandler {
 	return &ThesisHandler{
 		thesisService:  thesisService,
 		authMiddleware: authMiddleware,
+		emailService:   emailService,
 	}
 }
 
-// SubmitThesis handles thesis submission
-func (h *ThesisHandler) SubmitThesis(c *fiber.Ctx) error {
+// SubmitProposalThesis handles thesis proposal submission
+func (h *ThesisHandler) SubmitProposalThesis(c *fiber.Ctx) error {
 	var req dto.ThesisRequest
 	if err := c.BodyParser(&req); err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -35,49 +36,49 @@ func (h *ThesisHandler) SubmitThesis(c *fiber.Ctx) error {
 	// Get student ID from authenticated user
 	studentID := c.Locals("userID").(uuid.UUID)
 
-	// Create thesis entity
-	thesis := &entity.Thesis{
-		StudentID:      studentID,
-		Title:          req.Title,
-		Abstract:       req.Abstract,
-		ResearchField:  req.ResearchField,
-		SubmissionDate: time.Now(),
-		Status:         "Proposed",
-	}
-
-	// Submit thesis and assign supervisor
-	err := h.thesisService.SubmitThesis(c.Context(), thesis)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
-		})
-	}
-
 	supervisorID, err := uuid.Parse(req.SupervisorID)
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error": "invalid supervisor ID",
 		})
 	}
-	
-	// Assign requested supervisor
-	err = h.thesisService.AssignSupervisor(c.Context(), thesis.ID, supervisorID)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "thesis submitted but failed to assign supervisor: " + err.Error(),
-		})
-	}
 
-	// Get updated thesis with supervisor info
-	updatedThesis, err := h.thesisService.GetThesisByID(c.Context(), thesis.ID)
+	// Submit thesis with requested supervisor
+	thesis, err := h.thesisService.SubmitProposalThesis(c.Context(), &req, studentID, supervisorID)
 	if err != nil {
+		if err.Error() == "student not found" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "student not found",
+			})
+		}
+		if err.Error() == "supervisor not found" {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "supervisor not found",
+			})
+		}
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": "thesis submitted but failed to get updated data: " + err.Error(),
+			"error": err.Error(),
 		})
 	}
+	
+	// // Assign requested supervisor
+	// thesisLecture, err := h.thesisService.AssignSupervisor(c.Context(), thesis.ID, supervisorID)
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"error": "thesis submitted but failed to assign supervisor: " + err.Error(),
+	// 	})
+	// }
+
+	// // Get updated thesis with supervisor info
+	// updatedThesis, err := h.thesisService.GetThesisByID(c.Context(), thesis.ID)
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+	// 		"error": "thesis submitted but failed to get updated data: " + err.Error(),
+	// 	})
+	// }
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
-		"data": updatedThesis,
+		"data": thesis,
 	})
 }
 
@@ -169,10 +170,19 @@ func (h *ThesisHandler) UpdateThesis(c *fiber.Ctx) error {
 			"error": "invalid request body",
 		})
 	}
+	
+	supervisorID, err := uuid.Parse(req.SupervisorID)
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid supervisor ID",
+		})
+	}
 
 	// Update thesis fields
 	thesis.Title = req.Title
 	thesis.Abstract = req.Abstract
+	thesis.ResearchField = req.ResearchField
+	thesis.SupervisorID = supervisorID
 
 	// Update thesis
 	err = h.thesisService.UpdateThesis(c.Context(), thesis)
@@ -203,7 +213,7 @@ func (h *ThesisHandler) AssignSupervisor(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.thesisService.AssignSupervisor(c.Context(), thesisID, lectureID)
+	_, err = h.thesisService.AssignSupervisor(c.Context(), thesisID, lectureID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -231,7 +241,7 @@ func (h *ThesisHandler) AssignExaminer(c *fiber.Ctx) error {
 		})
 	}
 
-	err = h.thesisService.AssignExaminer(c.Context(), thesisID, lectureID)
+	_, err = h.thesisService.AssignExaminer(c.Context(), thesisID, lectureID)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -243,8 +253,8 @@ func (h *ThesisHandler) AssignExaminer(c *fiber.Ctx) error {
 	})
 }
 
-// ApproveThesis handles supervisor's or examiner's approval for a thesis
-func (h *ThesisHandler) ApproveThesis(c *fiber.Ctx) error {
+// ApproveThesisForDefense handles supervisor's approval for a thesis
+func (h *ThesisHandler) ApproveThesisForDefense(c *fiber.Ctx) error {
 	thesisID, err := uuid.Parse(c.Params("id"))
 	if err != nil {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
@@ -255,38 +265,62 @@ func (h *ThesisHandler) ApproveThesis(c *fiber.Ctx) error {
 	// Get supervisor ID from authenticated user
 	lectureID := c.Locals("userID").(uuid.UUID)
 
-	err = h.thesisService.ApproveThesis(c.Context(), thesisID, lectureID)
+	err = h.thesisService.ApproveThesisForDefense(c.Context(), thesisID, lectureID)
 	if err != nil {
-		if err.Error() == "lecture not assigned to this thesis" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
+		switch err.Error() {
+		case "thesis not found":
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		case "no lecture assigned to this thesis":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		case "lecture not assigned to this thesis":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		case "only lecture assigned as supervisor can approve thesis for defense":
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+		case "lecture must have at least one progress assigned to them":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})		
+		case "all progress must be reviewed before thesis can be approved":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
 		}
-		if err.Error() == "all progress must be reviewed before thesis can be approved" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-		if err.Error() == "thesis not found" {
-			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-		if err.Error() == "lecture must have at least one progress assigned to them" {
-			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-		if err.Error() == "only supervisors and examiners can approve thesis" {
-			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-				"error": err.Error(),
-			})
-		}
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
-			"error": err.Error(),
+	}
+
+	return c.JSON(fiber.Map{
+		"message": "thesis approved successfully",
+	})
+}
+
+// ApproveThesisForFinalize handles examiner's approval for a thesis
+func (h *ThesisHandler) ApproveThesisForFinalize(c *fiber.Ctx) error {
+	thesisID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid thesis ID",
 		})
 	}
 
+	// Get examiner ID from authenticated user
+	lectureID := c.Locals("userID").(uuid.UUID)
+
+	err = h.thesisService.ApproveThesisForFinalize(c.Context(), thesisID, lectureID)
+	if err != nil {
+		switch err.Error() {
+		case "thesis not found":
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+		case "no lecture assigned to this thesis":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		case "lecture not assigned to this thesis":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		case "only lecture assigned as final defense examiner can approve thesis to be finalized":
+			return c.Status(fiber.StatusForbidden).JSON(fiber.Map{"error": err.Error()})
+		case "lecture must have at least one progress assigned to them":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})		
+		case "all progress must be reviewed before thesis can be approved":
+			return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+		default:
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+		}
+	}
 	return c.JSON(fiber.Map{
 		"message": "thesis approved successfully",
 	})
@@ -308,15 +342,23 @@ func (h *ThesisHandler) MarkAsCompleted(c *fiber.Ctx) error {
 			"error": err.Error(),
 		})
 	}
+	
+	isReadyToMarkAsCompleted := thesis.IsProposalReady && thesis.IsFinalExamReady && thesis.Status == "Under Review"
 
-	if thesis.Status != "Under Review" {
+	if !isReadyToMarkAsCompleted {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
-			"error": "thesis must be in Under Review status to be marked as completed",
+			"error": "thesis must be approved by all supervisors and examiners to finalize before it can be marked as completed",
+		})
+	}
+
+	if thesis.FinalDocumentURL == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "student must upload final document before thesis can be marked as completed",
 		})
 	}
 
 	// Update thesis status to Completed
-	err = h.thesisService.UpdateThesisStatus(c.Context(), thesisID, string(entity.Completed))
+	err = h.thesisService.UpdateThesisStatus(c.Context(), thesisID, string(entity.ThesisCompleted))
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -336,13 +378,17 @@ func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	theses.Use(h.authMiddleware.Authenticate())
 
 	// Student routes
-	theses.Post("/", middleware.ValidateRequest(&dto.ThesisRequest{}), h.authMiddleware.RequireStudent(), h.SubmitThesis)
+	theses.Post("/", middleware.ValidateRequest(&dto.ThesisRequest{}), h.authMiddleware.RequireStudent(), h.SubmitProposalThesis)
 	theses.Put("/:id", h.authMiddleware.RequireStudent(), h.UpdateThesis)
 
 	// Admin routes
 	theses.Post("/:id/supervisor/:lecture_id", h.authMiddleware.RequireAdmin(), h.AssignSupervisor)
 	theses.Post("/:id/examiner/:lecture_id", h.authMiddleware.RequireAdmin(), h.AssignExaminer)
 	theses.Post("/:id/complete", h.authMiddleware.RequireAdmin(), h.MarkAsCompleted)
+
+	// Lecture routes
+	theses.Post("/:id/approve/defense", h.authMiddleware.RequireLecture(), h.ApproveThesisForDefense)
+	theses.Post("/:id/approve/finalize", h.authMiddleware.RequireLecture(), h.ApproveThesisForFinalize)
 	
 	// Routes accessible by all authenticated users
 	theses.Get("/", h.GetAllTheses)

@@ -20,17 +20,20 @@ type documentService struct {
 	thesisRepo   repository.ThesisRepository
 	progressRepo repository.ProgressRepository
 	supabase     *supabase.Client
+	emailService service.EmailService
 }
 
 func NewDocumentService(
 	thesisRepo repository.ThesisRepository,
 	progressRepo repository.ProgressRepository,
 	supabase *supabase.Client,
+	emailService service.EmailService,
 ) service.DocumentService {
 	return &documentService{
 		thesisRepo:   thesisRepo,
 		progressRepo: progressRepo,
 		supabase:     supabase,
+		emailService: emailService,
 	}
 }
 
@@ -49,20 +52,11 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, userID, thesi
 		return "", errors.New("you can only upload documents to your own thesis")
 	}
 
-	// Check supervisor approvals
-	supervisors := 0
-	approvedSupervisors := 0
-	for _, tl := range thesis.ThesisLectures {
-		if tl.Role == "Supervisor" {
-			supervisors++
-			if tl.ApprovedAt != nil {
-				approvedSupervisors++
-			}
-		}
-	}
+	isReadyToUploadDraftDocument := thesis.IsProposalReady && thesis.IsFinalExamReady
 
-	if approvedSupervisors < supervisors {
-		return "", errors.New("all supervisors must approve before uploading draft document")
+	// Check if thesis is ready to upload draft document for Final Defense
+	if !isReadyToUploadDraftDocument {
+		return "", errors.New("thesis must be approved by all supervisors and examiners before uploading draft document")
 	}
 
 	// Generate unique filename
@@ -91,6 +85,12 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, userID, thesi
 		return "", fmt.Errorf("failed to update thesis with document URL: %w", err)
 	}
 
+	// send email notification to supervisor and examiners that the draft document has been uploaded
+	err = s.emailService.SendThesisDraftDocumentUploadedNotification(ctx, thesis.Student.Email, thesis)
+	if err != nil {
+		return "", fmt.Errorf("failed to send email notification: %w", err)
+	}
+
 	return publicURL, nil
 }
 
@@ -102,29 +102,13 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesi
 	}
 	if thesis == nil {
 		return "", errors.New("thesis not found")
-	}
+	}	
 
-	//* This has been handled in the thesis service in the approve thesis function
-	// // Check examiner approvals
-	// examines := 0
-	// approvedExamines := 0
-	// for _, tl := range thesis.ThesisLectures {
-	// 	if tl.Role == "Examiner" {
-	// 		examines++
-	// 		if tl.ApprovedAt != nil {
-	// 			approvedExamines++
-	// 		}
-	// 	}
-	// }
+	isReadyToUploadFinalDocument := thesis.IsFinalExamReady && thesis.Status == "Under Review"
 
-	// if approvedExamines < examines {
-	// 	return "", errors.New("all examiners must approve before uploading final document")
-	// }
-	//* End of examiner approvals check
-
-	// Check if thesis is in Under Review status
-	if thesis.Status != "Under Review" {
-		return "", errors.New("final document can only be uploaded when thesis is in Under Review status")
+	// Check if thesis is ready to upload final document
+	if !isReadyToUploadFinalDocument {
+		return "", errors.New("thesis must be approved by all examiners before uploading final document")
 	}
 
 	// Generate unique filename
@@ -151,6 +135,12 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesi
 	err = s.thesisRepo.Update(ctx, thesis)
 	if err != nil {
 		return "", fmt.Errorf("failed to update thesis with document URL: %w", err)
+	}
+
+	// send email notification to supervisor and examiners that the final document has been uploaded
+	err = s.emailService.SendThesisFinalDocumentUploadedNotification(ctx, thesis.Student.Email, thesis)
+	if err != nil {
+		return "", fmt.Errorf("failed to send email notification: %w", err)
 	}
 
 	return publicURL, nil

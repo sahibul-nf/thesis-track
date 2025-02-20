@@ -3,9 +3,11 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"slices"
 	"time"
 
+	"thesis-track/internal/domain/dto"
 	"thesis-track/internal/domain/entity"
 	"thesis-track/internal/domain/repository"
 	"thesis-track/internal/domain/service"
@@ -19,6 +21,7 @@ type thesisService struct {
 	studentRepo      repository.StudentRepository
 	lectureRepo      repository.LectureRepository
 	progressRepo     repository.ProgressRepository
+	emailService     service.EmailService
 }
 
 func NewThesisService(
@@ -27,36 +30,77 @@ func NewThesisService(
 	studentRepo repository.StudentRepository,
 	lectureRepo repository.LectureRepository,
 	progressRepo repository.ProgressRepository,
+	emailService service.EmailService,
 ) service.ThesisService {
 	return &thesisService{
 		thesisRepo:       thesisRepo,
 		thesisLectureRepo: thesisLectureRepo,
-		progressRepo: progressRepo,
+		progressRepo:     progressRepo,
 		studentRepo:      studentRepo,
 		lectureRepo:      lectureRepo,
+		emailService:     emailService,
 	}
 }
 
-func (s *thesisService) SubmitThesis(ctx context.Context, thesis *entity.Thesis) error {
+func (s *thesisService) SubmitProposalThesis(ctx context.Context, req *dto.ThesisRequest, studentID uuid.UUID, supervisorID uuid.UUID) (*entity.Thesis, error) {
 	// Check if student exists
-	student, err := s.studentRepo.FindByID(ctx, thesis.StudentID)
+	student, err := s.studentRepo.FindByID(ctx, studentID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if student == nil {
-		return errors.New("student not found")
+		return nil, errors.New("student not found")
 	}
 
-	// Set initial status and submission date
-	thesis.Status = "Proposed"
-	thesis.SubmissionDate = time.Now()
+	// Check if supervisor exists
+	supervisor, err := s.lectureRepo.FindByID(ctx, supervisorID)
+	if err != nil {
+		return nil, err
+	}
+	if supervisor == nil {
+		return nil, errors.New("supervisor not found")
+	}
 
-	// // Generate new UUID if not provided
-	// if thesis.ID == uuid.Nil {
-	// 	thesis.ID = uuid.New()
-	// }
+	// Create thesis entity
+	thesis := &entity.Thesis{
+		StudentID:      studentID,
+		SupervisorID:   supervisorID,
+		Title:          req.Title,
+		Abstract:       req.Abstract,
+		ResearchField:  req.ResearchField,
+		SubmissionDate: time.Now(),
+		Status:         entity.ThesisPending,
+	}
 
-	return s.thesisRepo.Create(ctx, thesis)
+	thesis, err = s.thesisRepo.Create(ctx, thesis)
+	if err != nil {
+		return nil, err
+	}
+
+	// Send email notifications
+	// To Student
+	err = s.emailService.SendThesisProposalNotification(
+		ctx,
+		student.Email,
+		thesis,
+	)
+	if err != nil {
+		// Log error but don't fail the request
+		log.Printf("Failed to send email to student: %v", err)
+	}
+
+	// To Supervisor
+	err = s.emailService.SendThesisProposalNotification(
+		ctx,
+		supervisor.Email,
+		thesis,
+	)
+	if err != nil {
+		// Log error but don't fail the request
+		log.Printf("Failed to send email to supervisor: %v", err)
+	}
+
+	return thesis, nil
 }
 
 func (s *thesisService) UpdateThesis(ctx context.Context, thesis *entity.Thesis) error {
@@ -123,148 +167,390 @@ func (s *thesisService) UpdateThesisStatus(ctx context.Context, id uuid.UUID, st
 	}
 
 	// Update completion date if status is Completed
-	if status == "Completed" && thesis.Status != "Completed" {
+	if status == string(entity.ThesisCompleted) && thesis.Status != entity.ThesisCompleted {
 		completedDate := time.Now()
 		thesis.CompletedDate = &completedDate
 		err = s.thesisRepo.Update(ctx, thesis)
 		if err != nil {
 			return err
 		}
-	}
+
+		// Send email thesis completed notification
+		// To Student
+		err = s.emailService.SendThesisCompletedNotification(
+			ctx,
+			thesis.Student.Email,
+			"Student",
+			thesis,
+		)
+		if err != nil {
+			// Log error but don't fail the request
+			log.Printf("Failed to send email to student: %v", err)
+		}
+
+		// To Supervisor's and Examiner's email
+		for _, thesisLecture := range thesis.ThesisLectures {
+			err = s.emailService.SendThesisCompletedNotification(
+				ctx,
+				thesisLecture.Lecture.Email,
+				string(thesisLecture.Role),
+				thesis,
+			)
+			if err != nil {
+				// Log error but don't fail the request
+				log.Printf("Failed to send email to supervisor: %v", err)
+			}
+		}
+	}	
 
 	return s.thesisRepo.UpdateStatus(ctx, id, status)
 }
 
-func (s *thesisService) AssignSupervisor(ctx context.Context, thesisID, lectureID uuid.UUID) error {
-	return s.assignLectureToThesis(ctx, thesisID, lectureID, "Supervisor")
+func (s *thesisService) AssignSupervisor(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error) {
+	return s.assignLectureToThesis(ctx, thesisID, lectureID, entity.SupervisorRole)
 }
 
-func (s *thesisService) AssignExaminer(ctx context.Context, thesisID, lectureID uuid.UUID) error {
-	return s.assignLectureToThesis(ctx, thesisID, lectureID, "Examiner")
+func (s *thesisService) AssignExaminer(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error) {
+	return s.assignLectureToThesis(ctx, thesisID, lectureID, entity.ExaminerRole)
 }
 
-func (s *thesisService) assignLectureToThesis(ctx context.Context, thesisID, lectureID uuid.UUID, role string) error {
+func (s *thesisService) assignLectureToThesis(ctx context.Context, thesisID, lectureID uuid.UUID, role entity.LectureRole) (*entity.ThesisLecture, error) {
 	// Check if thesis exists
 	thesis, err := s.thesisRepo.FindByID(ctx, thesisID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if thesis == nil {
-		return errors.New("thesis not found")
+		return nil, errors.New("thesis not found")
 	}
 
 	// Check if lecture exists
 	lecture, err := s.lectureRepo.FindByID(ctx, lectureID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if lecture == nil {
-		return errors.New("lecture not found")
+		return nil, errors.New("lecture not found")
 	}
 
 	// Check if the lecture is already assigned to this thesis
 	thesisLectures, err := s.thesisLectureRepo.FindByThesisID(ctx, thesisID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	for _, tl := range thesisLectures {
 		if tl.LectureID == lectureID {
-			if tl.Role == role {
-				return errors.New("lecture is already assigned this role for this thesis")
+			if tl.Role != role {
+				return nil, errors.New("lecture is already assigned a different role for this thesis")
 			}
-			return errors.New("lecture is already assigned a different role for this thesis")
+
+			// TODO: implement examiner can be assigned to both proposal defense and final defense
+			return nil, errors.New("lecture is already assigned this role for this thesis")
+		}
+	}
+
+	var examinerType *entity.ExaminerType
+	if role == "Examiner" {
+		// Check if thesis is ready for proposal defense
+		if !thesis.IsProposalReady {
+			return nil, errors.New("thesis status must be Proposal Ready before assigning proposal defense examiner")
+		}
+
+		if !thesis.IsFinalExamReady {
+			return nil, errors.New("thesis status must be Final Exam Ready before assigning final defense examiner")
+		}
+
+		// Check if thesis is ready for final defense
+		if thesis.IsFinalExamReady {
+			finalDefenseExaminer := entity.FinalDefenseExaminer
+			examinerType = &finalDefenseExaminer
+		} else {
+			// Assign proposal defense examiner		
+			proposalDefenseExaminer := entity.ProposalDefenseExaminer
+			examinerType = &proposalDefenseExaminer
 		}
 	}
 
 	// Create new thesis-lecture relationship
 	thesisLecture := &entity.ThesisLecture{
-		ID:        uuid.New(),
 		ThesisID:  thesisID,
 		LectureID: lectureID,
 		Role:      role,
+		ExaminerType: examinerType,
 	}
 
-	return s.thesisLectureRepo.Create(ctx, thesisLecture)
-}
-
-func (s *thesisService) ApproveThesis(ctx context.Context, thesisID, lectureID uuid.UUID) error {
-	// Check if thesis exists
-	thesis, err := s.thesisRepo.FindByID(ctx, thesisID)
+	thesisLecture, err = s.thesisLectureRepo.Create(ctx, thesisLecture)
 	if err != nil {
-		return err
-	}
-	if thesis == nil {
-		return errors.New("thesis not found")
-	}	
-
-	// Find ThesisLecture record
-	thesisLecture, err := s.thesisLectureRepo.FindByThesisAndLecture(ctx, thesisID, lectureID)
-	if err != nil {
-		return err
-	}
-	if thesisLecture == nil {
-		return errors.New("lecture not assigned to this thesis")
+		return nil, err
 	}
 
-	// Check if lecture is a supervisor or examiner
-	if thesisLecture.Role != "Supervisor" && thesisLecture.Role != "Examiner" {
-		return errors.New("only supervisors and examiners can approve thesis")
-	}
-
-	// Check if all progress assigned to this supervisor has been reviewed
-	progresses, err := s.progressRepo.FindAllByThesisIDAndLectureID(ctx, thesisID, lectureID)
-	if err != nil {
-		return err
-	}
-
-	// Supervisor or examiner must have at least one progress assigned to them
-	if len(progresses) == 0 {
-		return errors.New("lecture must have at least one progress assigned to them")
-	}
-
-	// All progress must be reviewed
-	for _, progress := range progresses {
-		if progress.Status == "Pending" {
-			return errors.New("all progress must be reviewed before thesis can be approved")
+	// Update thesis status to In Progress if assigned supervisor same as the main supervisor
+	if role == entity.SupervisorRole && thesis.SupervisorID == lectureID {
+		err = s.UpdateThesisStatus(ctx, thesisID, string(entity.ThesisInProgress))
+		if err != nil {
+			return nil, err
 		}
 	}
 
-	// Set approval
+	// Send email notifications
+	// To Lecturer
+	err = s.emailService.SendThesisLectureAssignedNotification(
+		ctx,
+		lecture.Email,
+		string(role),
+		thesis,
+	)
+	if err != nil {
+		// Log error but don't fail the request
+		log.Printf("Failed to send email to lecturer: %v", err)
+	}
+
+	return thesisLecture, nil
+}
+
+// Approve Thesis Proposal For Defense By Supervisor
+func (s *thesisService) ApproveThesisForDefense(ctx context.Context, thesisID, lectureID uuid.UUID) error {
+	// Get and validate thesis and its lectures
+	thesis, thesisLectures, err := s.validateThesisAndGetLectures(ctx, thesisID)
+	if err != nil {
+		return err
+	}
+
+	// Get and validate thesis lecture
+	thesisLecture, err := s.validateThesisLecture(thesisLectures, lectureID, entity.SupervisorRole)
+	if err != nil {
+		return err
+	}
+
+	// Check if all progress assigned to this supervisor has been reviewed
+	if err := s.validateProgressReviews(ctx, thesisID, lectureID); err != nil {
+		return err
+	}
+
+	// Update approval date
 	now := time.Now()
-	thesisLecture.ApprovedAt = &now
+	if thesisLecture.ProposalDefenseApprovedAt != nil {
+		thesisLecture.FinalDefenseApprovedAt = &now
+	} else {
+		thesisLecture.ProposalDefenseApprovedAt = &now
+	}
+	
+	allSupervisorApprovedProposal, allSupervisorApprovedFinal := s.checkAllSupervisorsApproved(thesisLectures, thesisLecture)
+	
+	// Check if all supervisors have approved proposal thesis and update thesis status to Proposal Ready
+	if allSupervisorApprovedProposal && !thesis.IsProposalReady {
+		thesis.IsProposalReady = true
+
+		// Send email notification
+		err = s.emailService.SendThesisReadyForExamNotification(ctx, thesis.Student.Email, thesis, "Proposal Defense")
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+		}
+	}
+
+	// Check if all supervisors have approved final thesis and update thesis status to Final Exam Ready
+	if allSupervisorApprovedFinal && allSupervisorApprovedProposal && thesis.IsProposalReady {
+		thesis.IsFinalExamReady = true
+
+		// Send email notification
+		err = s.emailService.SendThesisReadyForExamNotification(ctx, thesis.Student.Email, thesis, "Final Thesis Defense")
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+		}
+	}
+
+	// Update thesis-lecture relationship
 	err = s.thesisLectureRepo.Update(ctx, thesisLecture)
 	if err != nil {
 		return err
 	}
 
-	// Check if all supervisors or examiners have approved
-	thesisLectures, err := s.thesisLectureRepo.FindByThesisID(ctx, thesisID)
+	// Update thesis
+	return s.thesisRepo.Update(ctx, thesis)
+}
+
+// Approve Thesis to be Finalized By Examiner
+func (s *thesisService) ApproveThesisForFinalize(ctx context.Context, thesisID, lectureID uuid.UUID) error {
+	// Get and validate thesis and its lectures
+	thesis, thesisLectures, err := s.validateThesisAndGetLectures(ctx, thesisID)
+	if err != nil {
+		return err
+	}
+	
+	// Get and validate thesis lecture
+	thesisLecture, err := s.validateThesisLecture(thesisLectures, lectureID, entity.ExaminerRole)
+	if err != nil {
+		return err
+	}
+	
+	// Check if all progress assigned to this examiner has been reviewed
+	if err := s.validateProgressReviews(ctx, thesisID, lectureID); err != nil {
+		return err
+	}
+	
+	isLectureFinalExaminer := thesisLecture.Role == "Examiner" && *thesisLecture.ExaminerType == entity.FinalDefenseExaminer
+	if !isLectureFinalExaminer {
+		return errors.New("only lecture assigned as final defense examiner can approve thesis to be finalized")
+	}
+
+	if !thesis.IsFinalExamReady {
+		return errors.New("thesis is not ready for finalization")  
+	}
+
+	now := time.Now()
+	thesisLecture.FinalizeApprovedAt = &now
+	
+	// Check if all examiners have approved thesis to be finalized and update thesis status to Under Review
+	allExaminersApprovedToFinalize := s.checkAllExaminersApprovedForFinalize(thesisLectures, thesisLecture)
+	if allExaminersApprovedToFinalize {
+		// Update thesis status to Under Review
+		thesis.Status = entity.ThesisUnderReview
+
+		// Send email notification
+		err = s.emailService.SendThesisReadyForFinalSubmissionNotification(ctx, thesis.Student.Email, thesis)
+		if err != nil {
+			log.Printf("Failed to send email: %v", err)
+		}
+	}
+
+	// Update thesis-lecture relationship
+	err = s.thesisLectureRepo.Update(ctx, thesisLecture)
 	if err != nil {
 		return err
 	}
 
-	allApproved := true
+	// Update thesis
+	return s.thesisRepo.Update(ctx, thesis)
+}
+
+func (s *thesisService) checkAllSupervisorsApproved(thesisLectures []entity.ThesisLecture, updatedThesisLecture *entity.ThesisLecture) (bool, bool) {
+	supervisors := 0
+	approvedProposal := 0
+	approvedFinal := 0
+
 	for _, tl := range thesisLectures {
-		if tl.Role == thesisLecture.Role && tl.ApprovedAt == nil {
-			allApproved = false
-			break
-		}
-	}	
-
-	// Update thesis status if all supervisors or examiners have approved
-	if allApproved {
-		if thesisLecture.Role == "Supervisor" {
-			thesis.Status = "Draft Ready"
-		} else if thesisLecture.Role == "Examiner" {
-			thesis.Status = "Under Review"
+		if tl.Role != "Supervisor" {
+			continue
 		}
 
-		err = s.thesisRepo.Update(ctx, thesis)
-		if err != nil {
-			return err
+		supervisors++
+
+		// assign updated thesis lecture to thesis lectures list
+		if tl.LectureID == updatedThesisLecture.LectureID {
+			tl = *updatedThesisLecture
+		}
+
+		// check if all supervisors have approved proposal thesis
+		if tl.ProposalDefenseApprovedAt != nil {
+			approvedProposal++
+		}
+
+		// check if all supervisors have approved final thesis
+		if tl.FinalDefenseApprovedAt != nil {
+			approvedFinal++
 		}
 	}
 
-	return nil
-} 
+	return approvedProposal == supervisors, approvedFinal == supervisors
+}
+
+// check if all examiners have approved thesis to be finalized
+func (s *thesisService) checkAllExaminersApprovedForFinalize(thesisLectures []entity.ThesisLecture, updatedThesisLecture *entity.ThesisLecture) bool {
+	examiners := 0
+	approved := 0
+
+	for _, tl := range thesisLectures {
+		if tl.Role != "Examiner" {
+			continue
+		}
+
+		if tl.ExaminerType != nil && *tl.ExaminerType != entity.FinalDefenseExaminer {
+			continue
+		}
+
+		examiners++
+
+		// assign updated thesis lecture to thesis lectures list
+		if tl.LectureID == updatedThesisLecture.LectureID {
+			tl = *updatedThesisLecture
+		}
+
+		// check if all examiners have approved thesis to be finalized
+		if tl.FinalizeApprovedAt != nil {
+			approved++
+		}
+	}
+
+	return approved == examiners
+}
+
+
+// validateThesisAndGetLectures checks if thesis exists and gets its lectures
+func (s *thesisService) validateThesisAndGetLectures(ctx context.Context, thesisID uuid.UUID) (*entity.Thesis, []entity.ThesisLecture, error) {
+    thesis, err := s.thesisRepo.FindByID(ctx, thesisID)
+    if err != nil {
+        return nil, nil, err
+    }
+    if thesis == nil {
+        return nil, nil, errors.New("thesis not found")
+    }
+
+    thesisLectures, err := s.thesisLectureRepo.FindByThesisID(ctx, thesisID)
+    if err != nil {
+        return nil, nil, err
+    }
+    if len(thesisLectures) == 0 {
+        return nil, nil, errors.New("no lecture assigned to this thesis")
+    }
+
+    return thesis, thesisLectures, nil
+}
+
+// validateProgressReviews checks if all progress has been reviewed
+func (s *thesisService) validateProgressReviews(ctx context.Context, thesisID, lectureID uuid.UUID) error {
+    progresses, err := s.progressRepo.FindAllByThesisIDAndLectureID(ctx, thesisID, lectureID)
+    if err != nil {
+        return err
+    }
+
+    if len(progresses) == 0 {
+        return errors.New("lecture must have at least one progress assigned to them")
+    }
+
+    for _, progress := range progresses {
+        if progress.Status == "Pending" {
+            return errors.New("all progress must be reviewed before thesis can be approved")
+        }
+    }
+
+    return nil
+}
+
+// validateThesisLecture checks if the lecture is assigned and has the correct role
+func (s *thesisService) validateThesisLecture(thesisLectures []entity.ThesisLecture, lectureID uuid.UUID, role entity.LectureRole) (*entity.ThesisLecture, error) {
+    var thesisLecture *entity.ThesisLecture
+    for _, tl := range thesisLectures {
+        if tl.LectureID == lectureID {
+            thesisLecture = &tl
+            break
+        }
+    }
+    if thesisLecture == nil {
+        return nil, errors.New("lecture not assigned to this thesis")
+    }
+
+    if thesisLecture.Role != role {
+		var errorMessage string
+		if role == entity.SupervisorRole {
+			errorMessage = "only lecture assigned as supervisor can approve thesis for defense"
+		} else if role == entity.ExaminerRole {
+			if *thesisLecture.ExaminerType != entity.FinalDefenseExaminer {
+				errorMessage = "only lecture assigned as final defense examiner can approve thesis to be finalized"
+			}
+		}
+        return nil, errors.New(errorMessage)
+    }
+
+    return thesisLecture, nil
+}

@@ -20,8 +20,12 @@ func NewThesisLectureRepository(db *gorm.DB) repository.ThesisLectureRepository 
 	}
 }
 
-func (r *thesisLectureRepository) Create(ctx context.Context, thesisLecture *entity.ThesisLecture) error {
-	return r.db.WithContext(ctx).Create(thesisLecture).Error
+func (r *thesisLectureRepository) Create(ctx context.Context, thesisLecture *entity.ThesisLecture) (*entity.ThesisLecture, error) {
+	err := r.db.WithContext(ctx).Create(thesisLecture).Error
+	if err != nil {
+		return nil, err
+	}
+	return thesisLecture, nil
 }
 
 func (r *thesisLectureRepository) Update(ctx context.Context, thesisLecture *entity.ThesisLecture) error {

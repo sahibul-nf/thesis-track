@@ -37,16 +37,17 @@ type AdminService interface {
 } 
 
 type ThesisService interface {
-	SubmitThesis(ctx context.Context, thesis *entity.Thesis) error
+	SubmitProposalThesis(ctx context.Context, req *dto.ThesisRequest, studentID uuid.UUID, supervisorID uuid.UUID) (*entity.Thesis, error)
 	UpdateThesis(ctx context.Context, thesis *entity.Thesis) error
 	DeleteThesis(ctx context.Context, id uuid.UUID) error
 	GetThesisByID(ctx context.Context, id uuid.UUID) (*entity.Thesis, error)
 	GetThesesByStudentID(ctx context.Context, studentID uuid.UUID) ([]entity.Thesis, error)
 	GetAllTheses(ctx context.Context) ([]entity.Thesis, error)
 	UpdateThesisStatus(ctx context.Context, id uuid.UUID, status string) error
-	AssignSupervisor(ctx context.Context, thesisID, lectureID uuid.UUID) error
-	AssignExaminer(ctx context.Context, thesisID, lectureID uuid.UUID) error
-	ApproveThesis(ctx context.Context, thesisID, lectureID uuid.UUID) error
+	AssignSupervisor(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error)
+	AssignExaminer(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error)
+	ApproveThesisForDefense(ctx context.Context, thesisID, lectureID uuid.UUID) error
+	ApproveThesisForFinalize(ctx context.Context, thesisID, lectureID uuid.UUID) error
 }
 
 type ProgressService interface {
@@ -71,4 +72,18 @@ type AuthService interface {
 	Register(ctx context.Context, registerData *dto.RegisterRequest) (*dto.RegisterResponse, error)
 	Login(ctx context.Context, email, password string) (*dto.LoginResponse, error)
 	VerifyToken(ctx context.Context, token string) (uuid.UUID, string, error)
-} 
+}
+
+type EmailService interface {
+	SendThesisSubmissionNotification(ctx context.Context, to string, studentName string, thesisTitle string, supervisorName string) error
+	SendThesisApprovedNotification(ctx context.Context, to string, studentName string, thesisTitle string) error
+	SendProgressSubmissionNotification(ctx context.Context, to string, studentName string, progressTitle string) error
+	SendProgressApprovalNotification(ctx context.Context, to string, studentName string, progressTitle string, status string) error
+	SendThesisCompletedNotification(ctx context.Context, to string, receiverRole string, thesis *entity.Thesis) error
+	SendThesisProposalNotification(ctx context.Context, to string, thesis *entity.Thesis) error
+	SendThesisLectureAssignedNotification(ctx context.Context, to string, assignerRole string, thesis *entity.Thesis) error
+	SendThesisReadyForExamNotification(ctx context.Context, to string, thesis *entity.Thesis, examType string) error
+	SendThesisReadyForFinalSubmissionNotification(ctx context.Context, to string, thesis *entity.Thesis) error
+	SendThesisFinalDocumentUploadedNotification(ctx context.Context, studentEmail string, thesis *entity.Thesis) error
+	SendThesisDraftDocumentUploadedNotification(ctx context.Context, studentEmail string, thesis *entity.Thesis) error
+}

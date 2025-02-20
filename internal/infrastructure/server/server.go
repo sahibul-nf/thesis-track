@@ -30,6 +30,7 @@ func NewServer(
 	thesisService service.ThesisService,
 	progressService service.ProgressService,
 	documentService service.DocumentService,
+	emailService service.EmailService,
 ) *Server {
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -60,8 +61,8 @@ func NewServer(
 	authHandler := handler.NewAuthHandler(authService)
 	studentHandler := handler.NewStudentHandler(studentService, authMiddleware)
 	lectureHandler := handler.NewLectureHandler(lectureService, authMiddleware)
-	thesisHandler := handler.NewThesisHandler(thesisService, authMiddleware)
-	progressHandler := handler.NewProgressHandler(progressService, thesisService, authMiddleware)
+	thesisHandler := handler.NewThesisHandler(thesisService, authMiddleware, emailService)
+	progressHandler := handler.NewProgressHandler(progressService, thesisService, authMiddleware, emailService)
 	documentHandler := handler.NewDocumentHandler(documentService, thesisService, progressService, authMiddleware)
 	adminHandler := handler.NewAdminHandler(adminService, authMiddleware)
 

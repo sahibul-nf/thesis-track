@@ -32,7 +32,14 @@ var requiredEnvVars = []string{
 	"DB_PORT",
 	"SUPABASE_URL",
 	"SUPABASE_KEY",
+	"SUPABASE_SERVICE_ROLE_KEY",
 	"JWT_SECRET",
+	"SMTP_HOST",
+	"SMTP_PORT",
+	"SMTP_USERNAME",
+	"SMTP_PASSWORD",
+	"SMTP_SENDER_EMAIL",
+	"SMTP_SENDER_NAME",
 }
 
 // ValidateConfig checks if all required environment variables are set

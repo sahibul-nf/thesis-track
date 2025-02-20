@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"log"
 	"time"
 
 	"thesis-track/internal/domain/dto"
@@ -19,6 +20,7 @@ type progressService struct {
 	commentRepo repository.CommentRepository
 	studentRepo repository.StudentRepository
 	lectureRepo repository.LectureRepository
+	emailService service.EmailService
 }
 
 func NewProgressService(
@@ -27,6 +29,7 @@ func NewProgressService(
 	commentRepo repository.CommentRepository,
 	studentRepo repository.StudentRepository,
 	lectureRepo repository.LectureRepository,
+	emailService service.EmailService,
 ) service.ProgressService {
 	return &progressService{
 		progressRepo: progressRepo,
@@ -34,6 +37,7 @@ func NewProgressService(
 		commentRepo: commentRepo,
 		studentRepo: studentRepo,
 		lectureRepo: lectureRepo,
+		emailService: emailService,
 	}
 }
 
@@ -43,13 +47,31 @@ func (s *progressService) AddProgress(ctx context.Context, req *dto.ProgressRequ
         ReviewerID:          uuid.MustParse(req.ReviewerID),
         ProgressDescription: req.ProgressDescription,
         DocumentURL:         req.DocumentURL,
-        Status:              "Pending",
+        Status:              entity.ProgressPending,
         AchievementDate:     time.Now(),
     }
 
     progress, err := s.progressRepo.Create(ctx, progress)
     if err != nil {
         return nil, err
+    }
+
+    // Get student and reviewer details for email
+    thesis, err := s.thesisRepo.FindByID(ctx, progress.ThesisID)
+    if err != nil {
+        return nil, err
+    }
+
+    student, err := s.studentRepo.FindByID(ctx, thesis.StudentID)
+    if err != nil {
+        return nil, err
+    }
+
+    // Send email notification
+    err = s.emailService.SendProgressSubmissionNotification(ctx, progress.Reviewer.Email, student.Name, progress.ProgressDescription)
+    if err != nil {
+        // Log the error but don't fail the progress creation
+        log.Printf("Failed to send progress submission notification: %v", err)
     }
 
     return progress, nil
@@ -120,7 +142,7 @@ func (s *progressService) ReviewProgress(ctx context.Context, id uuid.UUID, user
 		ProgressID: progress.ID,
 		Content:    req.Content,
 		UserID:     progress.ReviewerID,
-		UserType:   "Lecture",
+		UserType:   entity.LectureUser,
 	}
 
 	if req.ParentID != nil {
@@ -133,12 +155,21 @@ func (s *progressService) ReviewProgress(ctx context.Context, id uuid.UUID, user
 		return nil, err
 	}
 	
-	progress.Status = "Reviewed"
+	progress.Status = entity.ProgressReviewed
 
 	progress, err = s.progressRepo.Update(ctx, progress)
 	if err != nil {
 		return nil, err
 	}
+
+	student := progress.Thesis.Student
+
+    // Send email notification
+    err = s.emailService.SendProgressApprovalNotification(ctx, student.Email, student.Name, progress.ProgressDescription, string(progress.Status))
+    if err != nil {
+        // Log the error but don't fail the review process
+        log.Printf("Failed to send progress approval notification: %v", err)
+    }
 
 	return &dto.ReviewProgressResponse{
 		Comment: comment,
@@ -185,7 +216,7 @@ func (s *progressService) AddComment(ctx context.Context, progressID uuid.UUID, 
 	comment := &entity.Comment{
 		ProgressID: progressID,
 		UserID:     userID,
-		UserType:   userType,
+		UserType:   entity.UserType(userType),
 		ParentID:   parentID,
 		Content:    req.Content,
 	}
