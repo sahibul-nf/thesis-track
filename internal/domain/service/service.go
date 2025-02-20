@@ -48,6 +48,7 @@ type ThesisService interface {
 	AssignExaminer(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error)
 	ApproveThesisForDefense(ctx context.Context, thesisID, lectureID uuid.UUID) error
 	ApproveThesisForFinalize(ctx context.Context, thesisID, lectureID uuid.UUID) error
+	CalculateThesisProgress(ctx context.Context, thesis *entity.Thesis, progress []entity.Progress) (*entity.ThesisProgress, error)
 }
 
 type ProgressService interface {

@@ -12,13 +12,15 @@ import (
 
 type ThesisHandler struct {
 	thesisService  service.ThesisService
+	progressService service.ProgressService
 	authMiddleware *middleware.AuthMiddleware
 	emailService   service.EmailService
 }
 
-func NewThesisHandler(thesisService service.ThesisService, authMiddleware *middleware.AuthMiddleware, emailService service.EmailService) *ThesisHandler {
+func NewThesisHandler(thesisService service.ThesisService, progressService service.ProgressService, authMiddleware *middleware.AuthMiddleware, emailService service.EmailService) *ThesisHandler {
 	return &ThesisHandler{
 		thesisService:  thesisService,
+		progressService: progressService,
 		authMiddleware: authMiddleware,
 		emailService:   emailService,
 	}
@@ -370,6 +372,44 @@ func (h *ThesisHandler) MarkAsCompleted(c *fiber.Ctx) error {
 	})
 }
 
+// GetThesisProgress returns the progress of a thesis
+func (h *ThesisHandler) GetThesisProgress(c *fiber.Ctx) error {
+	thesisID, err := uuid.Parse(c.Params("id"))
+	if err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error": "invalid thesis ID",
+		})
+	}
+
+	// Get thesis by ID
+	thesis, err := h.thesisService.GetThesisByID(c.Context(), thesisID)
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+			"error": "thesis not found",
+		})
+	}
+
+	// Get progress by thesis ID
+	progresses, err := h.progressService.GetProgressesByThesisID(c.Context(), thesisID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to get progress",
+		})
+	}
+
+	// Calculate thesis progress
+	percentageProgress, err := h.thesisService.CalculateThesisProgress(c.Context(), thesis, progresses)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": "failed to calculate thesis progress",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"data": percentageProgress,
+	})
+}
+
 // RegisterRoutes registers all thesis routes
 func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	theses := app.Group("/theses")
@@ -394,4 +434,5 @@ func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	theses.Get("/", h.GetAllTheses)
 	theses.Get("/:id", h.GetThesisByID)
 	theses.Get("/student/:studentId", h.GetThesesByStudent)
+	theses.Get("/:id/progress", h.GetThesisProgress)
 }

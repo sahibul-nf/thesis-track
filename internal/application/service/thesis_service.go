@@ -554,3 +554,122 @@ func (s *thesisService) validateThesisLecture(thesisLectures []entity.ThesisLect
 
     return thesisLecture, nil
 }
+
+func (s *thesisService) CalculateThesisProgress(ctx context.Context, thesis *entity.Thesis, progresses []entity.Progress) (*entity.ThesisProgress, error) {
+	percentageProgress := &entity.ThesisProgress{
+		TotalProgress: 0,
+		Details: entity.ProgressDetails{
+			InitialPhase:   0,
+			ProposalPhase:  0,
+			ResearchPhase:  0,
+			FinalPhase:     0,
+		},
+	}
+
+	// 1. Initial Phase (15%)
+	percentageProgress.Details.InitialPhase = s.calculateInitialPhase(thesis)
+	
+	// 2. Proposal Phase (35%)
+	percentageProgress.Details.ProposalPhase = s.calculateProposalPhase(thesis, progresses)
+	
+	// 3. Research Phase (15%)
+	percentageProgress.Details.ResearchPhase = s.calculateResearchPhase(thesis, progresses)
+	
+	// 4. Final Phase (35%)
+	percentageProgress.Details.FinalPhase = s.calculateFinalPhase(thesis, progresses)
+
+	// Calculate total progress
+	percentageProgress.TotalProgress = percentageProgress.Details.InitialPhase +
+		percentageProgress.Details.ProposalPhase +
+		percentageProgress.Details.ResearchPhase +
+		percentageProgress.Details.FinalPhase
+
+	return percentageProgress, nil
+}
+
+func (s *thesisService) calculateInitialPhase(thesis *entity.Thesis) float64 {
+	var progress float64 = 0
+	
+	// Initial submission
+	if thesis.Status != "" {
+		progress += entity.InitialSubmissionWeight
+	}
+
+	var index = thesis.Status.Index()
+	
+	// Admin approval to start
+	if index >= entity.ThesisInProgress.Index() {
+		progress += entity.InProgressWeight
+	}
+	
+	return progress
+}
+
+func (s *thesisService) calculateProposalPhase(thesis *entity.Thesis, progresses []entity.Progress) float64 {
+	var progress float64 = 0
+	
+	// Calculate progress submissions for proposal
+	proposalProgress := s.calculateProgressSubmissions(thesis, "Proposal", progresses)
+	progress += (proposalProgress * entity.ProposalProgressWeight)
+	
+	// Calculate supervisor approvals for proposal
+	if thesis.IsProposalReady {
+		progress += entity.ProposalApprovalWeight
+	}
+	
+	return progress
+}
+
+func (s *thesisService) calculateResearchPhase(thesis *entity.Thesis, progresses []entity.Progress) float64 {
+	if !thesis.IsProposalReady {
+		return 0
+	}
+	
+	// Calculate progress during research phase
+	researchProgress := s.calculateProgressSubmissions(thesis, "Research", progresses)
+	return researchProgress * entity.ResearchProgressWeight
+}
+
+func (s *thesisService) calculateFinalPhase(thesis *entity.Thesis, progresses []entity.Progress) float64 {
+	var progress float64 = 0
+	
+	// Calculate progress submissions for final
+	finalProgress := s.calculateProgressSubmissions(thesis, "Final", progresses)
+	progress += (finalProgress * entity.FinalProgressWeight)
+	
+	// Calculate approvals for final defense
+	if thesis.IsFinalExamReady {
+		progress += entity.FinalApprovalWeight
+	}
+	
+	// Final completion by admin
+	if thesis.Status == entity.ThesisCompleted {
+		progress += entity.CompletionWeight
+	}
+	
+	return progress
+}
+
+func (s *thesisService) calculateProgressSubmissions(thesis *entity.Thesis, phase string, progresses []entity.Progress) float64 {
+	var completedCount float64 = 0
+	var totalExpected float64 = 1 // minimum expected submissions
+	
+	for _, thesisLecture := range thesis.ThesisLectures {
+		if thesisLecture.Role == entity.SupervisorRole {
+			totalExpected++ // increase expected submissions for each supervisor
+		}
+	}
+	
+	for _, progress := range progresses {
+		if progress.Status == entity.ProgressReviewed {
+			completedCount++
+		}
+	}
+	
+	progressRatio := completedCount / totalExpected
+	if progressRatio > 1 {
+		progressRatio = 1
+	}
+	
+	return progressRatio
+}
