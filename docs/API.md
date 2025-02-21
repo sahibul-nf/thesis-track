@@ -390,6 +390,29 @@ Mark a thesis as completed. This indicates that the thesis is approved by admin.
 }
 ```
 
+### Get Thesis Progress
+
+Get the progress of a thesis.
+
+**Endpoint**: `GET /theses/{id}/progress`
+
+**Auth**: Required (Admin/Lecture/Student)
+
+**Response (200)**:
+
+```json
+{
+  "data": {
+    "total_progress": "float",
+    "details": {
+      "initial_phase": "float",
+      "proposal_phase": "float",
+      "research_phase": "float",
+      "final_phase": "float"
+    }
+  }
+}
+```
 
 ## Progress Management
 
