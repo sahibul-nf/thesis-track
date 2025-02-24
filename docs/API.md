@@ -171,6 +171,7 @@ Submit a new thesis.
   "title": "string",
   "abstract": "string",
   "research_field": "string",
+  "supervisor_id": "uuid",
 }
 ```
 
