@@ -20,9 +20,13 @@ dependencies:
   # UI
   material3_layout: ^0.0.7
   google_fonts: ^6.1.0
+  flutter_initicon: ^3.0.1
   flutter_svg: ^2.0.9
   cached_network_image: ^3.3.1
   iconsax: ^0.0.8
+  shadcn_flutter: ^0.0.24
+  dotted_line: ^3.2.3
+  readmore: ^2.2.0
   
   # Network & API
   dio: ^5.4.0
@@ -38,6 +42,7 @@ dependencies:
   url_launcher: ^6.2.4
   flutter_dotenv: ^5.1.0
   dartz: ^0.10.1
+  timeago: ^3.7.0
 
 dev_dependencies:
   flutter_test:
@@ -51,7 +56,7 @@ flutter:
   
   assets:
     - assets/images/
-    - assets/icons/
+    # - assets/icons/
     - .env
 
   # fonts:

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:iconsax/iconsax.dart';
 import 'package:thesis_track_flutter_app/app/core/role_guard.dart';
 import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
 
@@ -21,39 +22,35 @@ class RouteGuard {
   }
 
   static String? handleRole(BuildContext context, GoRouterState state) {
-    final role = RoleGuard.getCurrentRole();
-    if (role == null) return null;
+    final user = RoleGuard.getCurrentUser();
+    if (user == null) return null;
+
+    final location = state.matchedLocation;
 
     // Student-specific routes
-    if (!RoleGuard.canCreateThesis() &&
-        (state.matchedLocation == '/thesis/create')) {
+    if (!RoleGuard.canCreateThesis() && location == '/thesis/create') {
       return '/';
     }
 
-    if (!RoleGuard.canAddProgress() &&
-        state.matchedLocation.contains('/progress/create')) {
+    if (!RoleGuard.canAddProgress() && location.contains('/progress/create')) {
       return '/';
     }
 
-    if (!RoleGuard.canUploadDocuments() &&
-        state.matchedLocation.contains('/documents')) {
+    if (!RoleGuard.canUploadDocuments() && location.contains('/documents')) {
       return '/';
     }
 
     // Lecturer-specific routes
-    if (!RoleGuard.canReviewProgress() &&
-        state.matchedLocation.contains('/review')) {
-      return '/';
-    }
+    // if (!RoleGuard.canReviewProgress() && location.contains('/review')) {
+    //   return '/';
+    // }
 
-    if (!RoleGuard.canApproveThesis() &&
-        state.matchedLocation.contains('/approve')) {
-      return '/';
-    }
+    // if (!RoleGuard.canApproveThesis() && location.contains('/approve')) {
+    //   return '/';
+    // }
 
     // Admin-specific routes
-    if (!RoleGuard.canManageUsers() &&
-        state.matchedLocation.startsWith('/admin')) {
+    if (!RoleGuard.canManageUsers() && location.startsWith('/admin')) {
       return '/';
     }
 
@@ -83,36 +80,56 @@ class RouteErrorScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.error_outline,
-                size: 64,
-                color: Theme.of(context).colorScheme.error,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Access Denied',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                message,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () => context.go('/'),
-                child: const Text('Go Home'),
-              ),
-            ],
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 400),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .errorContainer
+                        .withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Iconsax.warning_2,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Access Denied',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                FilledButton.icon(
+                  onPressed: () => context.go('/'),
+                  icon: const Icon(Iconsax.home),
+                  label: const Text('Back to Home'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(200, 48),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

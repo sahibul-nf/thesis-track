@@ -25,7 +25,7 @@ class AuthData {
         expiresIn: json["expires_in"],
         expiresAt: json["expires_at"],
         role: json["role"],
-        user: User.fromJson(json["user"]),
+        user: User.fromJson(json["user"], role: json["role"]),
     );
 
     Map<String, dynamic> toJson() => {

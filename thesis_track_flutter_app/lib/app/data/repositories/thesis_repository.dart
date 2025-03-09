@@ -3,7 +3,6 @@ import 'package:dio/dio.dart';
 import 'package:thesis_track_flutter_app/app/core/api_service.dart';
 import 'package:thesis_track_flutter_app/app/core/failures.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
-import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 
 class ThesisRepository {
   final ApiService _apiService = ApiService();
@@ -20,10 +19,11 @@ class ThesisRepository {
     }
   }
 
-  Future<Either<Failure, Thesis>> getThesisById(String id) async {
+  Future<Either<Failure, List<Thesis>>> getMyTheses() async {
     try {
-      final response = await _apiService.get('/theses/$id');
-      return Right(Thesis.fromJson(response.data['data']));
+      final response = await _apiService.get('/theses/me');
+      final List<dynamic> data = response.data['data'];
+      return Right(data.map((e) => Thesis.fromJson(e)).toList());
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {
@@ -31,11 +31,10 @@ class ThesisRepository {
     }
   }
 
-  Future<Either<Failure, List<User>>> getLecturers() async {
+  Future<Either<Failure, Thesis>> getThesisById(String id) async {
     try {
-      final response = await _apiService.get('/lecturers');
-      final List<dynamic> data = response.data['data'];
-      return Right(data.map((e) => User.fromJson(e)).toList());
+      final response = await _apiService.get('/theses/$id');
+      return Right(Thesis.fromJson(response.data['data']));
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {
@@ -91,9 +90,9 @@ class ThesisRepository {
     }
   }
 
-  Future<Either<Failure, Unit>> approveThesis(String thesisId) async {
+  Future<Either<Failure, Unit>> approveThesisForDefense(String thesisId) async {
     try {
-      await _apiService.post('/theses/$thesisId/approve');
+      await _apiService.post('/theses/$thesisId/approve/defense');
       return const Right(unit);
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
@@ -113,11 +112,11 @@ class ThesisRepository {
     }
   }
 
-  Future<Either<Failure, Map<String, dynamic>>> getThesisProgress(
+  Future<Either<Failure, ThesisProgress>> getThesisProgress(
       String thesisId) async {
     try {
       final response = await _apiService.get('/theses/$thesisId/progress');
-      return Right(response.data['data']);
+      return Right(ThesisProgress.fromJson(response.data['data']));
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {

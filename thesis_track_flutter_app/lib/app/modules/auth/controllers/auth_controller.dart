@@ -3,17 +3,18 @@ import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/data/repositories/auth_repository.dart';
 
+import '../../progress/controllers/progress_controller.dart';
+import '../../thesis/controllers/thesis_controller.dart';
+
 class AuthController extends GetxController {
+  static AuthController get to => Get.find();
+
   final AuthRepository _authRepository = AuthRepository();
   final _user = Rxn<User>();
   final _isLoading = false.obs;
-  final _supervisors = <User>[].obs;
-  final _users = <User>[].obs;
 
   User? get user => _user.value;
-  bool get isLoading => _isLoading.value;
-  List<User> get supervisors => _supervisors;
-  List<User> get users => _users;
+  bool get isLoading => _isLoading.value;  
 
   @override
   void onInit() {
@@ -21,25 +22,9 @@ class AuthController extends GetxController {
     // Check if user is already logged in
     final userData = StorageService.getUser();
     if (userData != null) {
-      _user.value = User.fromJson(userData);
+      _user.value = userData;
     }
-  }
-
-  Future<String?> getSupervisors() async {
-    try {
-      _isLoading.value = true;
-      final result = await _authRepository.getSupervisors();
-      return result.fold(
-        (failure) => failure.message,
-        (supervisors) {
-          _supervisors.value = supervisors;
-          return null;
-        },
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
+  }  
 
   Future<String?> login(String email, String password) async {
     try {
@@ -52,11 +37,9 @@ class AuthController extends GetxController {
           final accessToken = data.accessToken;
           final refreshToken = data.refreshToken;
 
-          data.user.role = data.role; // Add role to user
-
           await StorageService.setToken(accessToken);
           await StorageService.setRefreshToken(refreshToken);
-          await StorageService.setUser(data.user.toJson());
+          await StorageService.setUser(data.user);
           _user.value = data.user;
           return null;
         },
@@ -82,7 +65,7 @@ class AuthController extends GetxController {
         email: email,
         password: password,
         name: name,
-        role: role,
+        role: role.capitalizeFirst!,
         nidn: nidn,
         department: department,
         nim: nim,
@@ -92,14 +75,6 @@ class AuthController extends GetxController {
       return result.fold(
         (failure) => failure.message,
         (data) async {
-          final accessToken = data['access_token'] as String;
-          final refreshToken = data['refresh_token'] as String;
-          final userData = data['user'] as Map<String, dynamic>;
-
-          await StorageService.setToken(accessToken);
-          await StorageService.setRefreshToken(refreshToken);
-          await StorageService.setUser(userData);
-          _user.value = User.fromJson(userData);
           return null;
         },
       );
@@ -108,13 +83,19 @@ class AuthController extends GetxController {
     }
   }
 
-  Future<void> logout() async {
+  Future<String?> logout() async {
     try {
+      // Clear data from storage
       await StorageService.clearAuthData();
       _user.value = null;
-      Get.offAllNamed('/login');
+
+      // Delete all controllers
+      Get.delete<ThesisController>();
+      Get.delete<ProgressController>();
+
+      return null;
     } catch (e) {
-      // Handle error
+      return e.toString();
     }
   }
 
@@ -140,64 +121,7 @@ class AuthController extends GetxController {
     } catch (e) {
       return e.toString();
     }
-  }
-
-  Future<String?> getAllUsers() async {
-    try {
-      _isLoading.value = true;
-      final result = await _authRepository.getAllUsers();
-      return result.fold(
-        (failure) => failure.message,
-        (users) {
-          _users.value = users;
-          return null;
-        },
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<String?> updateUserRole({
-    required String userId,
-    required String role,
-  }) async {
-    try {
-      _isLoading.value = true;
-      final result = await _authRepository.updateUserRole(
-        userId: userId,
-        role: role,
-      );
-      return result.fold(
-        (failure) => failure.message,
-        (updatedUser) {
-          final index = _users.indexWhere((u) => u.id == userId);
-          if (index != -1) {
-            _users[index] = updatedUser;
-          }
-          return null;
-        },
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<String?> deleteUser(String userId) async {
-    try {
-      _isLoading.value = true;
-      final result = await _authRepository.deleteUser(userId);
-      return result.fold(
-        (failure) => failure.message,
-        (_) {
-          _users.removeWhere((u) => u.id == userId);
-          return null;
-        },
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
+  }  
 
   Future<String?> getStudent(String id) async {
     try {
@@ -242,11 +166,6 @@ class AuthController extends GetxController {
           // Update user if it's the current user
           if (_user.value?.id == id) {
             _user.value = student;
-          }
-          // Update user in users list if exists
-          final index = _users.indexWhere((u) => u.id == id);
-          if (index != -1) {
-            _users[index] = student;
           }
           return null;
         },

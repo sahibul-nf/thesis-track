@@ -23,13 +23,14 @@ class AuthRepository {
 
       return Right(authData);
     } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
+      var errorMessage = e.response?.data['error'];
+      return Left(ServerFailure(errorMessage ?? 'Server error occurred'));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
-  Future<Either<Failure, Map<String, dynamic>>> register({
+  Future<Either<Failure, bool>> register({
     required String email,
     required String password,
     required String name,
@@ -54,9 +55,10 @@ class AuthRepository {
         },
       );
 
-      return Right(response.data);
+      return const Right(true);
     } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
+      var errorMessage = e.response?.data['error'];
+      return Left(ServerFailure(errorMessage ?? 'Server error occurred'));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -74,70 +76,33 @@ class AuthRepository {
 
       return Right(response.data);
     } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
+      var errorMessage = e.response?.data['error'];
+      return Left(ServerFailure(errorMessage ?? 'Server error occurred'));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
 
-  Future<Either<Failure, List<User>>> getSupervisors() async {
+  Future<Either<Failure, List<User>>> getLecturers() async {
     try {
-      final response = await _apiService.get('/users/supervisors');
+      final response = await _apiService.get('/lectures');
       final List<dynamic> data = response.data['data'];
       return Right(data.map((e) => User.fromJson(e)).toList());
     } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
+      var errorMessage = e.response?.data['error'];
+      return Left(ServerFailure(errorMessage ?? 'Server error occurred'));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
-  }
-
-  Future<Either<Failure, List<User>>> getAllUsers() async {
-    try {
-      final response = await _apiService.get('/users');
-      final List<dynamic> data = response.data['data'];
-      return Right(data.map((e) => User.fromJson(e)).toList());
-    } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  Future<Either<Failure, User>> updateUserRole({
-    required String userId,
-    required String role,
-  }) async {
-    try {
-      final response = await _apiService.put(
-        '/users/$userId/role',
-        data: {'role': role},
-      );
-      return Right(User.fromJson(response.data['data']));
-    } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
-  Future<Either<Failure, Unit>> deleteUser(String userId) async {
-    try {
-      await _apiService.delete('/users/$userId');
-      return const Right(unit);
-    } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
+  }  
 
   Future<Either<Failure, User>> getStudent(String id) async {
     try {
       final response = await _apiService.get('/students/$id');
       return Right(User.fromJson(response.data['data']));
     } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
+      var errorMessage = e.response?.data['error'];
+      return Left(ServerFailure(errorMessage ?? 'Server error occurred'));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
@@ -164,7 +129,8 @@ class AuthRepository {
       );
       return Right(User.fromJson(response.data['data']));
     } on DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
+      var errorMessage = e.response?.data['error'];
+      return Left(ServerFailure(errorMessage ?? 'Server error occurred'));
     } catch (e) {
       return Left(ServerFailure(e.toString()));
     }

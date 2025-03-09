@@ -1,22 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material3_layout/material3_layout.dart';
+import 'package:iconsax/iconsax.dart';
+import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
-import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/controllers/progress_controller.dart';
-import 'package:thesis_track_flutter_app/app/widgets/app_bar.dart';
-import 'package:thesis_track_flutter_app/app/widgets/button.dart';
-import 'package:thesis_track_flutter_app/app/widgets/card.dart';
+import 'package:thesis_track_flutter_app/app/theme/app_theme.dart';
 import 'package:thesis_track_flutter_app/app/widgets/text_field.dart';
+import 'package:thesis_track_flutter_app/app/widgets/toast.dart';
 
 class ProgressCreateScreen extends StatefulWidget {
   const ProgressCreateScreen({
     super.key,
-    required this.thesisId,
+    required this.thesis,
   });
 
-  final String thesisId;
+  final Thesis thesis;
 
   @override
   State<ProgressCreateScreen> createState() => _ProgressCreateScreenState();
@@ -25,18 +24,13 @@ class ProgressCreateScreen extends StatefulWidget {
 class _ProgressCreateScreenState extends State<ProgressCreateScreen> {
   final _formKey = GlobalKey<FormState>();
   final _progressDescriptionController = TextEditingController();
+  final _documentUrlController = TextEditingController();
   final _progressController = Get.find<ProgressController>();
-  final _authController = Get.find<AuthController>();
   User? _selectedReviewer;
 
   @override
   void initState() {
     super.initState();
-    _loadSupervisors();
-  }
-
-  Future<void> _loadSupervisors() async {
-    await _authController.getSupervisors();
   }
 
   @override
@@ -46,110 +40,229 @@ class _ProgressCreateScreenState extends State<ProgressCreateScreen> {
   }
 
   Future<void> _submit() async {
-    if (_formKey.currentState!.validate()) {
-      await _progressController.addProgress(
-        thesisId: widget.thesisId,
-        reviewerId: _selectedReviewer!.id,
-        progressDescription: _progressDescriptionController.text,
-      );
-
-      if (context.mounted) {
-        context.go('/thesis/${widget.thesisId}');
-      }
+    if (!_formKey.currentState!.validate()) {
+      return;
     }
+
+    final err = await _progressController.addProgress(
+      thesis: widget.thesis,
+      reviewerId: _selectedReviewer!.id,
+      documentUrl: _documentUrlController.text,
+      progressDescription: _progressDescriptionController.text,
+    );
+
+    if (err != null) {
+      return MyToast.showShadcnUIToast(
+        context,
+        'Error',
+        err,
+        isError: true,
+      );
+    }
+
+    if (context.mounted) context.pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const ThesisAppBar(
-        title: 'Add Progress',
-      ),
-      body: PageLayout(
-        compactLayout: SinglePaneLayout(
-          child: _buildContent(),
-        ),
-        mediumLayout: SinglePaneLayout(
-          child: _buildContent(),
-        ),
-        expandedLayout: SinglePaneLayout(
-          child: _buildContent(),
-        ),
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 1024, maxHeight: 800),
+        child: _buildContent(),
       ),
     );
   }
 
   Widget _buildContent() {
-    return Form(
-      key: _formKey,
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          ThesisCard(
-            title: 'Progress Information',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                ThesisTextField(
-                  controller: _progressDescriptionController,
-                  label: 'Progress Description',
-                  hint: 'Enter progress description',
-                  maxLines: 5,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter progress description';
-                    }
-                    return null;
-                  },
+    final theme = Theme.of(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainer,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            AppBar(
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(28),
+                  topRight: Radius.circular(28),
                 ),
-                const SizedBox(height: 16),
-                Text(
-                  'Reviewer',
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: 8),
-                Obx(() {
-                  final supervisors = _authController.supervisors;
-
-                  return DropdownButtonFormField<User>(
-                    value: _selectedReviewer,
-                    decoration: const InputDecoration(
-                      hintText: 'Select reviewer',
-                      border: OutlineInputBorder(),
-                    ),
-                    items: supervisors
-                        .map(
-                          (supervisor) => DropdownMenuItem(
-                            value: supervisor,
-                            child: Text(supervisor.name),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedReviewer = value;
-                      });
+              ),
+              automaticallyImplyLeading: false,
+              scrolledUnderElevation: 0.0,
+              centerTitle: false,
+              forceMaterialTransparency: true,
+              toolbarHeight: 60,
+              title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'New Progress',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  IconButton(
+                    onPressed: () {
+                      context.pop();
                     },
-                    validator: (value) {
-                      if (value == null) {
-                        return 'Please select reviewer';
-                      }
-                      return null;
-                    },
-                  );
-                }),
-              ],
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Obx(() {
-            return ThesisButton(
-              text: 'Submit',
-              onPressed: _submit,
-              isLoading: _progressController.isLoading,
-            );
-          }),
-        ],
+            const Divider(height: 1),
+            Expanded(
+              child: Container(
+                padding: EdgeInsets.all(AppTheme.spaceLG),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  spacing: AppTheme.spaceMD,
+                  children: [
+                    ThesisTextField(
+                      controller: _progressDescriptionController,
+                      maxLines: 5,
+                      label: 'What progress have you made?',
+                      hint:
+                          'Describe your recent thesis progress and achievements...',
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your progress description';
+                        }
+
+                        if (value.length < 10) {
+                          return 'Please provide at least 10 characters to better describe your progress';
+                        }
+
+                        return null;
+                      },
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Who should review this progress?',
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        SizedBox(height: AppTheme.spaceSM),
+                        DropdownButtonFormField<User>(
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium!
+                              .copyWith(
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                          value: _selectedReviewer,
+                          decoration: const InputDecoration(
+                            hintText: 'Choose a reviewer',
+                          ),
+                          items: widget.thesis.lecturers
+                              .map(
+                                (lecturer) => DropdownMenuItem(
+                                  value: lecturer,
+                                  child: Text(lecturer.name),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedReviewer = value;
+                            });
+                          },
+                          validator: (value) {
+                            if (value == null) {
+                              return 'Please select a reviewer for your progress';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                    ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ThesisTextField(
+                          controller: _documentUrlController,
+                          label: 'Document Link',
+                          hint:
+                              'Share your document link (Google Drive, OneDrive, etc.)',
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Please enter your document link';
+                            }
+                            return null;
+                          },
+                        ),
+                        SizedBox(height: AppTheme.spaceSM),
+                        // Info card
+                        Container(
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppTheme.spaceMD,
+                            vertical: AppTheme.spaceMD,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface,
+                            borderRadius:
+                                BorderRadius.circular(AppTheme.cardRadius),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Iconsax.info_circle,
+                                size: 20,
+                                color: theme.colorScheme.primary,
+                              ),
+                              SizedBox(width: AppTheme.spaceMD),
+                              Expanded(
+                                child: Text(
+                                  'Please ensure you have configured proper access permissions for your document. The reviewer should have edit/comment access to review your work effectively.',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurfaceVariant,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: EdgeInsets.all(AppTheme.spaceLG),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  Obx(() {
+                    final isLoading = _progressController.isLoading;
+                    return FilledButton.icon(
+                      onPressed: isLoading ? null : _submit,
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(170, 48),
+                      ),
+                      icon: isLoading ? null : const Icon(Iconsax.send_2),
+                      label: isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Submit'),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

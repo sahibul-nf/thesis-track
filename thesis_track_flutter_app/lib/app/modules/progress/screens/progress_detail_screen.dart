@@ -2,21 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Progress;
 import 'package:thesis_track_flutter_app/app/core/role_guard.dart';
 import 'package:thesis_track_flutter_app/app/data/models/comment_model.dart';
+import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/controllers/progress_controller.dart';
 import 'package:thesis_track_flutter_app/app/widgets/app_bar.dart';
-import 'package:thesis_track_flutter_app/app/widgets/button.dart';
 import 'package:thesis_track_flutter_app/app/widgets/card.dart';
 import 'package:thesis_track_flutter_app/app/widgets/empty_state.dart';
 import 'package:thesis_track_flutter_app/app/widgets/loading.dart';
 import 'package:thesis_track_flutter_app/app/widgets/text_field.dart';
 
 class ProgressDetailScreen extends StatefulWidget {
-  final String progressId;
+  final ProgressModel progress;
 
   const ProgressDetailScreen({
     super.key,
-    required this.progressId,
+    required this.progress,
   });
 
   @override
@@ -44,19 +44,19 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
   }
 
   Future<void> _loadProgress() async {
-    await _progressController.getProgressById(widget.progressId);
-    await _progressController.getCommentsByProgress(widget.progressId);
+    await _progressController.getProgressById(widget.progress.id);
+    await _progressController.getCommentsByProgress(widget.progress.id);
   }
 
   Future<void> _addComment() async {
     if (_commentController.text.isEmpty) return;
 
     final success = await _progressController.addComment(
-      progressId: widget.progressId,
+      progress: widget.progress,
       content: _commentController.text,
     );
 
-    if (success) {
+    if (success != null) {
       _commentController.clear();
       await _loadProgress();
     }
@@ -66,12 +66,12 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
     if (_replyController.text.isEmpty) return;
 
     final success = await _progressController.addComment(
-      progressId: widget.progressId,
+      progress: widget.progress,
       content: _replyController.text,
       parentId: parentId,
     );
 
-    if (success) {
+    if (success != null) {
       _replyController.clear();
       _replyToId = null;
       await _loadProgress();
@@ -108,11 +108,11 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
     if (confirmed != true) return;
 
     final success = await _progressController.reviewProgress(
-      progressId: widget.progressId,
+      progress: widget.progress,
       comment: 'Progress marked as $status',
     );
 
-    if (success) {
+    if (success != null) {
       await _loadProgress();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -176,7 +176,9 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
                           ],
                         ),
                       ),
-                      ThesisStatusChip(status: progress.status),
+                      Obx(() {
+                        return ThesisStatusChip(status: progress.status.value);
+                      }),
                     ],
                   ),
                   if (progress.documentUrl != null) ...[
@@ -196,12 +198,12 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
                           ),
                         ),
                         const SizedBox(width: 16),
-                        ThesisButton(
-                          text: 'Download',
+                        FilledButton.icon(
                           onPressed: () {
                             // TODO: Implement document download
                           },
-                          icon: Icons.download_outlined,
+                          icon: const Icon(Icons.download_outlined),
+                          label: const Text('Download'),
                         ),
                       ],
                     ),
@@ -218,20 +220,18 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
                     Row(
                       children: [
                         Expanded(
-                          child: ThesisButton(
-                            text: 'Approve',
+                          child: FilledButton.icon(
                             onPressed: () => _reviewProgress('approved'),
-                            icon: Icons.check_circle_outline,
+                            icon: const Icon(Icons.check_circle_outline),
+                            label: const Text('Approve'),
                           ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: ThesisButton(
-                            text: 'Reject',
+                          child: FilledButton.icon(
                             onPressed: () => _reviewProgress('rejected'),
-                            icon: Icons.cancel_outlined,
-                            backgroundColor:
-                                Theme.of(context).colorScheme.error,
+                            icon: const Icon(Icons.cancel_outlined),
+                            label: const Text('Reject'),
                           ),
                         ),
                       ],
@@ -258,16 +258,16 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
                       maxLines: 3,
                     ),
                     const SizedBox(height: 16),
-                    ThesisButton(
-                      text: 'Post Comment',
+                    FilledButton(
                       onPressed: _addComment,
+                      child: const Text('Post Comment'),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
             ],
-            if (_progressController.comments.isEmpty)
+            if (progress.comments.isEmpty)
               const EmptyStateWidget(
                 message: 'No comments yet',
                 icon: Icons.chat_bubble_outline,
@@ -276,9 +276,9 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
               ListView.builder(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                itemCount: _progressController.comments.length,
+                itemCount: progress.comments.length,
                 itemBuilder: (context, index) {
-                  final comment = _progressController.comments[index];
+                  final comment = progress.comments[index];
                   return _buildCommentCard(comment);
                 },
               ),
@@ -356,9 +356,9 @@ class _ProgressDetailScreenState extends State<ProgressDetailScreen> {
               maxLines: 2,
             ),
             const SizedBox(height: 8),
-            ThesisButton(
-              text: 'Post Reply',
+            FilledButton(
               onPressed: () => _addReply(comment.id),
+              child: const Text('Post Reply'),
             ),
           ],
           if (comment.replies.isNotEmpty) ...[

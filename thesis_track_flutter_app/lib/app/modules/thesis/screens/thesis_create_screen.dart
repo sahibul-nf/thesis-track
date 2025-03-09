@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
-import 'package:material3_layout/material3_layout.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
+import 'package:thesis_track_flutter_app/app/modules/home/controllers/admin_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/controllers/thesis_controller.dart';
-import 'package:thesis_track_flutter_app/app/widgets/app_bar.dart';
-import 'package:thesis_track_flutter_app/app/widgets/button.dart';
 import 'package:thesis_track_flutter_app/app/widgets/card.dart';
 import 'package:thesis_track_flutter_app/app/widgets/text_field.dart';
 
@@ -24,16 +22,11 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
   final _researchFieldController = TextEditingController();
   final _thesisController = Get.find<ThesisController>();
   final _authController = Get.find<AuthController>();
-  User? _selectedSupervisor;
+  final Rx<User?> _selectedSupervisor = Rx<User?>(null);
 
   @override
   void initState() {
     super.initState();
-    _loadSupervisors();
-  }
-
-  Future<void> _loadSupervisors() async {
-    await _authController.getSupervisors();
   }
 
   @override
@@ -50,7 +43,7 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
         title: _titleController.text,
         abstract: _abstractController.text,
         researchField: _researchFieldController.text,
-        supervisorId: _selectedSupervisor!.id,
+        supervisorId: _selectedSupervisor.value?.id ?? '',
       );
 
       if (context.mounted) {
@@ -61,22 +54,7 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const ThesisAppBar(
-        title: 'Submit Thesis',
-      ),
-      body: PageLayout(
-        compactLayout: SinglePaneLayout(
-          child: _buildContent(),
-        ),
-        mediumLayout: SinglePaneLayout(
-          child: _buildContent(),
-        ),
-        expandedLayout: SinglePaneLayout(
-          child: _buildContent(),
-        ),
-      ),
-    );
+    return _buildContent();
   }
 
   Widget _buildContent() {
@@ -84,6 +62,7 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
       key: _formKey,
       child: ListView(
         padding: const EdgeInsets.all(16),
+        shrinkWrap: true,
         children: [
           ThesisCard(
             title: 'Thesis Information',
@@ -133,10 +112,10 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
                 ),
                 const SizedBox(height: 8),
                 Obx(() {
-                  final supervisors = _authController.supervisors;
+                  final supervisors = AdminController.to.lecturers;
 
-                  return DropdownButtonFormField<User>(
-                    value: _selectedSupervisor,
+                  return DropdownButtonFormField<User?>(
+                    value: _selectedSupervisor.value,
                     decoration: const InputDecoration(
                       hintText: 'Select supervisor',
                       border: OutlineInputBorder(),
@@ -150,9 +129,7 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
                         )
                         .toList(),
                     onChanged: (value) {
-                      setState(() {
-                        _selectedSupervisor = value;
-                      });
+                      _selectedSupervisor.value = value;
                     },
                     validator: (value) {
                       if (value == null) {
@@ -167,10 +144,17 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
           ),
           const SizedBox(height: 16),
           Obx(() {
-            return ThesisButton(
-              text: 'Submit',
-              onPressed: _submit,
-              isLoading: _thesisController.isLoading,
+            final isCreating = _thesisController.isCreating;
+            return FilledButton(
+              onPressed: isCreating ? null : _submit,
+              child: isCreating
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : const Text('Submit'),
             );
           }),
         ],

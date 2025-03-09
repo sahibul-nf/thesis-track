@@ -1,11 +1,32 @@
+import 'package:flutter/material.dart';
+
+enum UserRole {
+  student('Student', Color(0xFF2196F3)), // Bright blue for students - learning/growth
+  lecturer('Lecture', Color(0xFF009688)), // Teal for lecturers - wisdom/teaching
+  admin('Admin', Color(0xFF673AB7)); // Deep purple for admins - authority/control
+
+  final String name;
+  final Color color;
+
+  const UserRole(this.name, this.color);
+
+  static UserRole? fromString(String? role) {
+    if (role == null) return null;
+    return UserRole.values.firstWhere(
+      (e) => e.name.toLowerCase() == role.toLowerCase(),
+      orElse: () => UserRole.student,
+    );
+  }
+}
+
 class User {
   final String id;
   final String name;
   final String email;
-  String? role;
+  final UserRole role;
   final String? nim;
   final String? nidn;
-  final String department;
+  final String? department;
   final String? year;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -14,7 +35,7 @@ class User {
     required this.id,
     required this.name,
     required this.email,
-    this.role,
+    required this.role,
     this.nim,
     this.nidn,
     required this.department,
@@ -23,14 +44,15 @@ class User {
     required this.updatedAt,
   });
 
-  factory User.fromJson(Map<String, dynamic> json) {
+  factory User.fromJson(Map<String, dynamic> json, {String? role}) {
     return User(
       id: json['id'] as String,
       name: json['name'] as String,
       email: json['email'] as String,
+      role: UserRole.fromString(role) ?? UserRole.student,
       nim: json['nim'] as String?,
       nidn: json['nidn'] as String?,
-      department: json['department'] as String,
+      department: json['department'] as String?,
       year: json['year'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -42,6 +64,7 @@ class User {
       'id': id,
       'name': name,
       'email': email,
+      'role': role.name,
       'nim': nim,
       'nidn': nidn,
       'department': department,
@@ -55,7 +78,7 @@ class User {
     String? id,
     String? name,
     String? email,
-    String? role,
+    UserRole? role,
     String? nim,
     String? nidn,
     String? department,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:thesis_track_flutter_app/app/theme/app_theme.dart';
 
 class ThesisTextField extends StatelessWidget {
   final String? label;
@@ -62,9 +63,9 @@ class ThesisTextField extends StatelessWidget {
       children: [
         Text(
           label!,
-          style: Theme.of(context).textTheme.titleMedium,
+          style: Theme.of(context).textTheme.titleSmall,
         ),
-        const SizedBox(height: 8),
+        SizedBox(height: AppTheme.spaceSM),
         TextFormField(
           controller: controller,
           initialValue: initialValue,

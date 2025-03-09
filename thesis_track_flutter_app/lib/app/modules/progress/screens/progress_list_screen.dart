@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Progress;
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
-import 'package:material3_layout/material3_layout.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
+import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
+import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/controllers/progress_controller.dart';
 import 'package:thesis_track_flutter_app/app/widgets/app_bar.dart';
-import 'package:thesis_track_flutter_app/app/widgets/button.dart';
 import 'package:thesis_track_flutter_app/app/widgets/card.dart';
 import 'package:thesis_track_flutter_app/app/widgets/empty_state.dart';
 import 'package:thesis_track_flutter_app/app/widgets/skeleton.dart';
@@ -15,10 +15,10 @@ import 'package:thesis_track_flutter_app/app/widgets/skeleton.dart';
 class ProgressListScreen extends StatefulWidget {
   const ProgressListScreen({
     super.key,
-    required this.thesisId,
+    required this.thesis,
   });
 
-  final String thesisId;
+  final Thesis thesis;
 
   @override
   State<ProgressListScreen> createState() => _ProgressListScreenState();
@@ -43,10 +43,10 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
   }
 
   Future<void> _loadProgress() async {
-    if (_authController.user?.role == 'lecturer') {
-      await _progressController.getProgressesByReviewer(widget.thesisId);
+    if (_authController.user?.role == UserRole.lecturer) {
+      await _progressController.getProgressesByReviewer(widget.thesis);
     } else {
-      await _progressController.getProgressesByThesis(widget.thesisId);
+      await _progressController.getProgressesByThesis(widget.thesis);
     }
   }
 
@@ -58,24 +58,13 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
       appBar: const ThesisAppBar(
         title: 'Progress List',
       ),
-      body: PageLayout(
-        compactLayout: SinglePaneLayout(
-          child: _buildContent(theme),
-        ),
-        mediumLayout: SinglePaneLayout(
-          child: _buildContent(theme),
-        ),
-        expandedLayout: SinglePaneLayout(
-          child: _buildContent(theme),
-        ),
-      ),
-      floatingActionButton: _authController.user?.role == 'student'
-          ? ThesisFloatingActionButton(
-              icon: Iconsax.add,
-              label: 'Add Progress',
-              extended: true,
+      body: _buildContent(theme),
+      floatingActionButton: _authController.user?.role == UserRole.student
+          ? FloatingActionButton.extended(
+              icon: const Icon(Iconsax.add),
+              label: const Text('Add Progress'),
               onPressed: () =>
-                  context.go('/progress/thesis/${widget.thesisId}/create'),
+                  context.go('/progress/thesis/${widget.thesis.id}/create'),
             )
           : null,
     );
@@ -155,8 +144,7 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
               );
             }
 
-            final filteredProgress =
-                _progressController.progresses.where((progress) {
+            final filteredProgress = widget.thesis.progresses.where((progress) {
               final matchesSearch = progress.progressDescription
                   .toLowerCase()
                   .contains(_searchController.text.toLowerCase());
@@ -176,12 +164,12 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
                     ? 'No progress found for "${_searchController.text}"'
                     : 'No progress records yet',
                 icon: Iconsax.clipboard_close,
-                actionLabel: _authController.user?.role == 'student'
+                actionLabel: _authController.user?.role == UserRole.student
                     ? 'Add Progress'
                     : null,
-                onAction: _authController.user?.role == 'student'
-                    ? () =>
-                        context.go('/progress/thesis/${widget.thesisId}/create')
+                onAction: _authController.user?.role == UserRole.student
+                    ? () => context
+                        .go('/progress/thesis/${widget.thesis.id}/create')
                     : null,
               );
             }
@@ -203,7 +191,7 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
     );
   }
 
-  Widget _buildProgressCard(Progress progress, ThemeData theme) {
+  Widget _buildProgressCard(ProgressModel progress, ThemeData theme) {
     final hasDocument = progress.documentUrl != null;
     final formattedDate = _formatDate(progress.achievementDate);
 
@@ -246,7 +234,9 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
                   ],
                 ),
               ),
-              ThesisStatusChip(status: progress.status),
+              Obx(() {
+                return ThesisStatusChip(status: progress.status.value);
+              }),
             ],
           ),
           const SizedBox(height: 16),

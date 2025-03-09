@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 
 class StorageService {
   static const String _tokenKey = 'auth_token';
@@ -31,14 +32,15 @@ class StorageService {
   }
 
   // User Data Management
-  static Future<void> setUser(Map<String, dynamic> userData) async {
-    await _prefs.setString(_userKey, jsonEncode(userData));
+  static Future<void> setUser(User user) async {
+    await _prefs.setString(_userKey, jsonEncode(user.toJson()));
   }
 
-  static Map<String, dynamic>? getUser() {
+  static User? getUser() {
     final userStr = _prefs.getString(_userKey);
     if (userStr != null) {
-      return jsonDecode(userStr) as Map<String, dynamic>;
+      var userData = jsonDecode(userStr) as Map<String, dynamic>;
+      return User.fromJson(userData, role: userData['role']);
     }
     return null;
   }

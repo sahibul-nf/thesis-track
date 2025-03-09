@@ -1,35 +1,51 @@
 import 'package:get/get.dart' hide Progress;
 import 'package:thesis_track_flutter_app/app/data/models/comment_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
+import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/repositories/progress_repository.dart';
 
 class ProgressController extends GetxController {
-  final ProgressRepository _progressRepository = ProgressRepository();
-  final _progresses = <Progress>[].obs;
-  final _selectedProgress = Rxn<Progress>();
-  final _comments = <Comment>[].obs;
+  static ProgressController get to => Get.find();
+
+  late final ProgressRepository _progressRepository;
+
+  ProgressController({ProgressRepository? progressRepository}) {
+    _progressRepository = progressRepository ?? ProgressRepository();
+  }
+
+  final _selectedProgress = Rxn<ProgressModel>();
   final _isLoading = false.obs;
   final _error = Rxn<String>();
 
-  List<Progress> get progresses => _progresses;
-  Progress? get selectedProgress => _selectedProgress.value;
-  List<Comment> get comments => _comments;
+  final _isSendingComment = false.obs;
+
+  ProgressModel? get selectedProgress => _selectedProgress.value;
   bool get isLoading => _isLoading.value;
   String? get error => _error.value;
+  bool get isSendingComment => _isSendingComment.value;
 
-  Future<bool> getProgressesByThesis(String thesisId) async {
+  Future<bool> getProgressesByThesis(Thesis thesis) async {
     try {
       _isLoading.value = true;
       _error.value = null;
 
-      final result = await _progressRepository.getProgressesByThesis(thesisId);
+      final result = await _progressRepository.getProgressesByThesis(thesis.id);
       return result.fold(
         (failure) {
           _error.value = failure.message;
           return false;
         },
-        (progresses) {
-          _progresses.value = progresses;
+        (progresses) async {
+          // assign progresses to thesis
+          thesis.progresses.value = progresses;
+
+          // load comments for each progress
+          if (progresses.isNotEmpty) {
+            for (var progress in progresses) {
+              var comments = await getCommentsByProgress(progress.id);
+              progress.comments.value = comments;
+            }
+          }
           return true;
         },
       );
@@ -38,20 +54,29 @@ class ProgressController extends GetxController {
     }
   }
 
-  Future<bool> getProgressesByReviewer(String thesisId) async {
+  Future<bool> getProgressesByReviewer(Thesis thesis) async {
     try {
       _isLoading.value = true;
       _error.value = null;
 
       final result =
-          await _progressRepository.getProgressesByReviewer(thesisId);
+          await _progressRepository.getProgressesByReviewer(thesis.id);
       return result.fold(
         (failure) {
           _error.value = failure.message;
           return false;
         },
-        (progresses) {
-          _progresses.value = progresses;
+        (progresses) async {
+          // assign progresses to thesis
+          thesis.progresses.value = progresses;
+
+          // load comments for each progress
+          if (progresses.isNotEmpty) {
+            for (var progress in progresses) {
+              var comments = await getCommentsByProgress(progress.id);
+              progress.comments.value = comments;
+            }
+          }
           return true;
         },
       );
@@ -71,8 +96,12 @@ class ProgressController extends GetxController {
           _error.value = failure.message;
           return false;
         },
-        (progress) {
+        (progress) async {
           _selectedProgress.value = progress;
+
+          var comments = await getCommentsByProgress(progress.id);
+          progress.comments.value = comments;
+
           return true;
         },
       );
@@ -81,30 +110,31 @@ class ProgressController extends GetxController {
     }
   }
 
-  Future<bool> addProgress({
-    required String thesisId,
+  Future<String?> addProgress({
+    required Thesis thesis,
     required String reviewerId,
     required String progressDescription,
-    String? documentUrl,
+    required String documentUrl,
   }) async {
     try {
       _isLoading.value = true;
       _error.value = null;
 
       final result = await _progressRepository.addProgress(
-        thesisId: thesisId,
+        thesisId: thesis.id,
         reviewerId: reviewerId,
-        progressDescription: progressDescription,
-        documentUrl: documentUrl,
+        progressDescription: progressDescription.trim(),
+        documentUrl: documentUrl.trim(),
       );
       return result.fold(
         (failure) {
           _error.value = failure.message;
-          return false;
+          return failure.message;
         },
         (progress) {
-          _progresses.add(progress);
-          return true;
+          // assign progress to thesis
+          thesis.progresses.add(progress);
+          return null;
         },
       );
     } finally {
@@ -116,6 +146,7 @@ class ProgressController extends GetxController {
     required String id,
     required String progressDescription,
     String? documentUrl,
+    required ProgressModel progressModel,
   }) async {
     try {
       _isLoading.value = true;
@@ -132,10 +163,12 @@ class ProgressController extends GetxController {
           return false;
         },
         (progress) {
-          final index = _progresses.indexWhere((p) => p.id == id);
-          if (index != -1) {
-            _progresses[index] = progress;
-          }
+          // final index = _progresses.indexWhere((p) => p.id == id);
+          // if (index != -1) {
+          //   _progresses[index] = progress;
+          // }
+
+          progressModel = progress;
           return true;
         },
       );
@@ -144,33 +177,35 @@ class ProgressController extends GetxController {
     }
   }
 
-  Future<bool> reviewProgress({
-    required String progressId,
+  Future<String?> reviewProgress({
+    required ProgressModel progress,
     required String comment,
     String? parentId,
   }) async {
     try {
-      _isLoading.value = true;
-      _error.value = null;
+      _isSendingComment.value = true;
 
       final result = await _progressRepository.reviewProgress(
-        progressId: progressId,
+        progressId: progress.id,
         comment: comment,
         parentId: parentId,
       );
       return result.fold(
         (failure) {
-          _error.value = failure.message;
-          return false;
+          return failure.message;
         },
-        (comment) => true,
+        (data) {
+          progress.comments.add(data.comment);
+          progress.status = data.progress.status;
+          return null;
+        },
       );
     } finally {
-      _isLoading.value = false;
+      _isSendingComment.value = false;
     }
   }
 
-  Future<bool> getCommentsByProgress(String progressId) async {
+  Future<List<Comment>> getCommentsByProgress(String progressId) async {
     try {
       _isLoading.value = true;
       _error.value = null;
@@ -180,11 +215,10 @@ class ProgressController extends GetxController {
       return result.fold(
         (failure) {
           _error.value = failure.message;
-          return false;
+          return [];
         },
         (comments) {
-          _comments.value = comments;
-          return true;
+          return comments;
         },
       );
     } finally {
@@ -192,32 +226,35 @@ class ProgressController extends GetxController {
     }
   }
 
-  Future<bool> addComment({
-    required String progressId,
+  Future<String?> addComment({
+    required ProgressModel progress,
     required String content,
     String? parentId,
   }) async {
     try {
-      _isLoading.value = true;
-      _error.value = null;
+      _isSendingComment.value = true;
 
       final result = await _progressRepository.addComment(
-        progressId: progressId,
+        progressId: progress.id,
         content: content,
         parentId: parentId,
       );
+
       return result.fold(
         (failure) {
-          _error.value = failure.message;
-          return false;
+          return failure.message;
         },
         (comment) {
-          _comments.add(comment);
-          return true;
+          // final progress = _progresses.firstWhere((p) => p.id == progressId);
+          // progress.comments.add(comment);
+
+          progress.comments.add(comment);
+
+          return null;
         },
       );
     } finally {
-      _isLoading.value = false;
+      _isSendingComment.value = false;
     }
   }
 }

@@ -134,31 +134,32 @@ class ApiService {
     }
   }
 
-  Exception _handleError(d.DioException e) {
+  String _handleError(d.DioException e) {
     switch (e.type) {
       case d.DioExceptionType.connectionTimeout:
       case d.DioExceptionType.sendTimeout:
       case d.DioExceptionType.receiveTimeout:
-        return Exception('Connection timed out');
+        return 'Connection timed out';
       case d.DioExceptionType.badResponse:
+        var errorMessage = e.response?.data['error'];
         switch (e.response?.statusCode) {
           case 400:
-            return Exception('Bad request');
+            return errorMessage ?? 'Bad request';
           case 401:
-            return Exception('Unauthorized');
+            return errorMessage ?? 'Unauthorized';
           case 403:
-            return Exception('Forbidden');
+            return errorMessage ?? 'Forbidden';
           case 404:
-            return Exception('Not found');
+            return errorMessage ?? 'Not found';
           case 500:
-            return Exception('Internal server error');
+            return errorMessage ?? 'Internal server error';
           default:
-            return Exception('Server error');
+            return errorMessage ?? 'Server error';
         }
       case d.DioExceptionType.cancel:
-        return Exception('Request cancelled');
+        return 'Request cancelled';
       default:
-        return Exception('Network error occurred');
+        return 'Network error occurred';
     }
   }
 }

@@ -40,7 +40,7 @@ class Comment {
               .map((e) => Comment.fromJson(e as Map<String, dynamic>))
               .toList()
           : [],
-      user: User.fromJson(json['user'] as Map<String, dynamic>),
+      user: User.fromJson(json['user'] as Map<String, dynamic>, role: json['user_type'] as String),
     );
   }
 

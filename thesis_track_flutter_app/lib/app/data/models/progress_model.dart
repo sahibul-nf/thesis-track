@@ -1,18 +1,20 @@
+import 'package:get/get_rx/src/rx_types/rx_types.dart';
+import 'package:thesis_track_flutter_app/app/data/models/comment_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 
-class Progress {
+class ProgressModel {
   final String id;
   final String thesisId;
   final String reviewerId;
   final String progressDescription;
   final String? documentUrl;
-  final String status;
+  RxString status;
   final DateTime achievementDate;
   final DateTime createdAt;
   final DateTime updatedAt;
   final User reviewer;
 
-  Progress({
+  ProgressModel({
     required this.id,
     required this.thesisId,
     required this.reviewerId,
@@ -24,15 +26,17 @@ class Progress {
     required this.updatedAt,
     required this.reviewer,
   });
+  
+  RxList<Comment> comments = <Comment>[].obs;
 
-  factory Progress.fromJson(Map<String, dynamic> json) {
-    return Progress(
+  factory ProgressModel.fromJson(Map<String, dynamic> json) {
+    return ProgressModel(
       id: json['id'] as String,
       thesisId: json['thesis_id'] as String,
       reviewerId: json['reviewer_id'] as String,
       progressDescription: json['progress_description'] as String,
       documentUrl: json['document_url'] as String?,
-      status: json['status'] as String,
+      status: RxString(json['status'] as String),
       achievementDate: DateTime.parse(json['achievement_date'] as String),
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
@@ -47,7 +51,7 @@ class Progress {
       'reviewer_id': reviewerId,
       'progress_description': progressDescription,
       'document_url': documentUrl,
-      'status': status,
+      'status': status.value,
       'achievement_date': achievementDate.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -55,19 +59,19 @@ class Progress {
     };
   }
 
-  Progress copyWith({
+  ProgressModel copyWith({
     String? id,
     String? thesisId,
     String? reviewerId,
     String? progressDescription,
     String? documentUrl,
-    String? status,
+    RxString? status,
     DateTime? achievementDate,
     DateTime? createdAt,
     DateTime? updatedAt,
     User? reviewer,
   }) {
-    return Progress(
+    return ProgressModel(
       id: id ?? this.id,
       thesisId: thesisId ?? this.thesisId,
       reviewerId: reviewerId ?? this.reviewerId,

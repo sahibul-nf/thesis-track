@@ -8,12 +8,12 @@ import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
 class ProgressRepository {
   final ApiService _apiService = ApiService();
 
-  Future<Either<Failure, List<Progress>>> getProgressesByThesis(
+  Future<Either<Failure, List<ProgressModel>>> getProgressesByThesis(
       String thesisId) async {
     try {
       final response = await _apiService.get('/progress/thesis/$thesisId');
       final List<dynamic> data = response.data['data'];
-      return Right(data.map((e) => Progress.fromJson(e)).toList());
+      return Right(data.map((e) => ProgressModel.fromJson(e)).toList());
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {
@@ -21,13 +21,13 @@ class ProgressRepository {
     }
   }
 
-  Future<Either<Failure, List<Progress>>> getProgressesByReviewer(
+  Future<Either<Failure, List<ProgressModel>>> getProgressesByReviewer(
       String thesisId) async {
     try {
       final response =
           await _apiService.get('/progress/thesis/$thesisId/assignee');
       final List<dynamic> data = response.data['data'];
-      return Right(data.map((e) => Progress.fromJson(e)).toList());
+      return Right(data.map((e) => ProgressModel.fromJson(e)).toList());
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {
@@ -35,10 +35,10 @@ class ProgressRepository {
     }
   }
 
-  Future<Either<Failure, Progress>> getProgressById(String id) async {
+  Future<Either<Failure, ProgressModel>> getProgressById(String id) async {
     try {
       final response = await _apiService.get('/progress/$id');
-      return Right(Progress.fromJson(response.data['data']));
+      return Right(ProgressModel.fromJson(response.data['data']));
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {
@@ -46,7 +46,7 @@ class ProgressRepository {
     }
   }
 
-  Future<Either<Failure, Progress>> addProgress({
+  Future<Either<Failure, ProgressModel>> addProgress({
     required String thesisId,
     required String reviewerId,
     required String progressDescription,
@@ -62,7 +62,7 @@ class ProgressRepository {
           'document_url': documentUrl,
         },
       );
-      return Right(Progress.fromJson(response.data['data']));
+      return Right(ProgressModel.fromJson(response.data['data']));
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {
@@ -70,7 +70,7 @@ class ProgressRepository {
     }
   }
 
-  Future<Either<Failure, Progress>> updateProgress({
+  Future<Either<Failure, ProgressModel>> updateProgress({
     required String id,
     required String progressDescription,
     String? documentUrl,
@@ -83,7 +83,7 @@ class ProgressRepository {
           'document_url': documentUrl,
         },
       );
-      return Right(Progress.fromJson(response.data['data']));
+      return Right(ProgressModel.fromJson(response.data['data']));
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {
@@ -91,7 +91,8 @@ class ProgressRepository {
     }
   }
 
-  Future<Either<Failure, Comment>> reviewProgress({
+  Future<Either<Failure, ({Comment comment, ProgressModel progress})>>
+      reviewProgress({
     required String progressId,
     required String comment,
     String? parentId,
@@ -100,11 +101,15 @@ class ProgressRepository {
       final response = await _apiService.post(
         '/progress/$progressId/review',
         data: {
-          'comment': comment,
+          'content': comment,
           'parent_id': parentId,
         },
       );
-      return Right(Comment.fromJson(response.data['data']['comment']));
+      
+      return Right((
+        comment: Comment.fromJson(response.data['data']['comment']),
+        progress: ProgressModel.fromJson(response.data['data']['progress']),
+      ));
     } on DioException catch (e) {
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
     } catch (e) {

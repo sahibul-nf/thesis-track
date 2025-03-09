@@ -4,11 +4,11 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/core/role_guard.dart';
+import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/file/controllers/file_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/controllers/thesis_controller.dart';
 import 'package:thesis_track_flutter_app/app/widgets/app_bar.dart';
-import 'package:thesis_track_flutter_app/app/widgets/button.dart';
 import 'package:thesis_track_flutter_app/app/widgets/card.dart';
 import 'package:thesis_track_flutter_app/app/widgets/empty_state.dart';
 import 'package:thesis_track_flutter_app/app/widgets/loading.dart';
@@ -17,10 +17,10 @@ import 'package:url_launcher/url_launcher.dart';
 class ThesisDocumentsScreen extends StatefulWidget {
   const ThesisDocumentsScreen({
     super.key,
-    required this.thesisId,
+    required this.thesis,
   });
 
-  final String thesisId;
+  final Thesis thesis;
 
   @override
   State<ThesisDocumentsScreen> createState() => _ThesisDocumentsScreenState();
@@ -39,7 +39,7 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
   }
 
   Future<void> _loadThesis() async {
-    await _thesisController.getThesisById(widget.thesisId);
+    await _thesisController.getThesisById(widget.thesis.id);
   }
 
   @override
@@ -55,13 +55,7 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
             return const LoadingWidget();
           }
 
-          final thesis = _thesisController.selectedThesis;
-          if (thesis == null) {
-            return const EmptyStateWidget(
-              message: 'Thesis not found',
-              icon: Icons.school_outlined,
-            );
-          }
+          final thesis = widget.thesis;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -81,18 +75,18 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: ThesisButton(
-                              text: 'Upload Draft',
+                            child: FilledButton(
                               onPressed: () => _uploadDocument(isDraft: true),
+                              child: const Text('Upload Draft'),
                             ),
                           ),
                           const SizedBox(width: 16),
                           Expanded(
-                            child: ThesisButton(
-                              text: 'Upload Final',
+                            child: FilledButton(
                               onPressed: thesis.status == 'approved'
                                   ? () => _uploadDocument(isDraft: false)
                                   : null,
+                              child: const Text('Upload Final'),
                             ),
                           ),
                         ],
@@ -180,20 +174,19 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
           Row(
             children: [
               Expanded(
-                child: ThesisButton(
-                  text: 'Download',
+                child: FilledButton.icon(
                   onPressed: () => _downloadDocument(url),
-                  icon: Icons.download_outlined,
+                  icon: const Icon(Icons.download_outlined),
+                  label: const Text('Download'),
                 ),
               ),
               if (canDelete) ...[
                 const SizedBox(width: 16),
                 Expanded(
-                  child: ThesisButton(
-                    text: 'Delete',
+                  child: FilledButton.icon(
                     onPressed: () => _deleteDocument(url),
-                    icon: Icons.delete_outline,
-                    backgroundColor: Theme.of(context).colorScheme.error,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Delete'),
                   ),
                 ),
               ],
@@ -247,7 +240,7 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
       String? errorMessage;
       if (isDraft) {
         errorMessage = await _fileController.uploadThesisDraft(
-          widget.thesisId,
+          widget.thesis.id,
           file,
         );
       } else {
@@ -279,7 +272,7 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
         if (confirmed != true) return;
 
         errorMessage = await _fileController.uploadThesisFinal(
-          widget.thesisId,
+          widget.thesis.id,
           file,
         );
       }
