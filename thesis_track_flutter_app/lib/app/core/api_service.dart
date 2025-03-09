@@ -5,7 +5,7 @@ import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
 
 class ApiConfig {
   static const String apiBaseUrl =
-      'https://thesis-track-production.up.railway.app/';
+      'https://thesis-track-production.up.railway.app/api/v1';
   static const String apiTimeout = '10000';
 }
 
