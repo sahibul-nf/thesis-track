@@ -1,6 +1,8 @@
 package handler
 
 import (
+	"errors"
+	"fmt"
 	"thesis-track/internal/application/middleware"
 	"thesis-track/internal/domain/dto"
 	"thesis-track/internal/domain/entity"
@@ -8,6 +10,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 type ThesisHandler struct {
@@ -410,6 +413,69 @@ func (h *ThesisHandler) GetThesisProgress(c *fiber.Ctx) error {
 	})
 }
 
+// GetMyTheses returns theses based on user's role
+func (h *ThesisHandler) GetMyTheses(c *fiber.Ctx) error {
+	userID := c.Locals("userID").(uuid.UUID)
+	role := c.Locals("userRole").(string)
+
+	fmt.Println("role: ", role)
+	fmt.Println("userID: ", userID)
+
+	var theses []entity.Thesis
+	var err error
+
+	switch role {
+	case "Student":
+		theses, err = h.thesisService.GetThesesByStudentID(c.Context(), userID)
+	case "Lecture":
+		// Get both supervised and examined theses
+		supervisedTheses, err1 := h.thesisService.GetThesesByLectureID(c.Context(), userID, "Supervisor")
+		if err1 != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err1.Error(),
+			})
+		}
+
+		examinedTheses, err2 := h.thesisService.GetThesesByLectureID(c.Context(), userID, "Examiner")
+		if err2 != nil {
+			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+				"error": err2.Error(),
+			})
+		}
+
+		// Combine and deduplicate theses
+		thesesMap := make(map[uuid.UUID]entity.Thesis)
+		for _, t := range supervisedTheses {
+			thesesMap[t.ID] = t
+		}
+		for _, t := range examinedTheses {
+			thesesMap[t.ID] = t
+		}
+
+		theses = make([]entity.Thesis, 0, len(thesesMap))
+		for _, t := range thesesMap {
+			theses = append(theses, t)
+		}
+	case "Admin":
+		theses, err = h.thesisService.GetAllTheses(c.Context())
+	}
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return c.Status(fiber.StatusNotFound).JSON(fiber.Map{
+				"error": "no theses found",
+			})
+		}
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error": err.Error(),
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"data": theses,
+	})
+}
+
 // RegisterRoutes registers all thesis routes
 func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	theses := app.Group("/theses")
@@ -432,6 +498,7 @@ func (h *ThesisHandler) RegisterRoutes(app fiber.Router) {
 	
 	// Routes accessible by all authenticated users
 	theses.Get("/", h.GetAllTheses)
+	theses.Get("/me", h.GetMyTheses)
 	theses.Get("/:id", h.GetThesisByID)
 	theses.Get("/student/:studentId", h.GetThesesByStudent)
 	theses.Get("/:id/progress", h.GetThesisProgress)

@@ -88,7 +88,7 @@ type Thesis struct {
 
 	// Relations
 	Student        Student         `json:"student" gorm:"foreignKey:StudentID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
-	Supervisor     Lecture         `json:"-" gorm:"foreignKey:SupervisorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	Supervisor     Lecture         `json:"main_supervisor" gorm:"foreignKey:SupervisorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	ThesisLectures []ThesisLecture `json:"-" gorm:"foreignKey:ThesisID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
@@ -183,25 +183,25 @@ func (t Thesis) MarshalJSON() ([]byte, error) {
 		t.ThesisLectures = []ThesisLecture{}
 	}
 
-	supervisors := make([]Lecture, 0)
-	examiners := make([]Lecture, 0)
+	supervisors := make([]ThesisLecture, 0)
+	examiners := make([]ThesisLecture, 0)
 
 	for _, tl := range t.ThesisLectures {
 		if tl.Lecture.ID == uuid.Nil {
 			continue
 		}
 		switch tl.Role {
-		case "Supervisor":
-			supervisors = append(supervisors, tl.Lecture)
-		case "Examiner":
-			examiners = append(examiners, tl.Lecture)
+		case SupervisorRole:
+			supervisors = append(supervisors, tl)
+		case ExaminerRole:
+			examiners = append(examiners, tl)
 		}
 	}
 
 	return json.Marshal(&struct {
 		Alias
-		Supervisors []Lecture `json:"supervisors"`
-		Examiners   []Lecture `json:"examiners"`
+		Supervisors []ThesisLecture `json:"supervisors"`
+		Examiners   []ThesisLecture `json:"examiners"`
 	}{
 		Alias:       Alias(t),
 		Supervisors: supervisors,
@@ -234,7 +234,7 @@ func (c Comment) MarshalJSON() ([]byte, error) {
 
 // Tambahkan konstanta untuk bobot progress
 const (
-	// Thesis Status Weights
+	// Initial Submission Weight
 	InitialSubmissionWeight   float64 = 10  // Ketika thesis pertama disubmit
 	InProgressWeight         float64 = 5   // Ketika thesis disetujui admin
 	

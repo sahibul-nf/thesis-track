@@ -31,8 +31,7 @@ type AdminRepository interface {
 	Update(ctx context.Context, admin *entity.Admin) error
 	Delete(ctx context.Context, id uuid.UUID) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Admin, error)
-	FindByEmail(ctx context.Context, email string) (*entity.Admin, error)
-	FindAll(ctx context.Context) ([]entity.Admin, error)
+	FindByEmail(ctx context.Context, email string) (*entity.Admin, error)	
 } 
 
 type ThesisRepository interface {
@@ -43,6 +42,7 @@ type ThesisRepository interface {
 	FindByStudentID(ctx context.Context, studentID uuid.UUID) ([]entity.Thesis, error)
 	FindAll(ctx context.Context) ([]entity.Thesis, error)
 	UpdateStatus(ctx context.Context, id uuid.UUID, status string) error
+	FindByLectureID(ctx context.Context, lectureID uuid.UUID, lectureRole string) ([]entity.Thesis, error)
 }
 
 type ProgressRepository interface {

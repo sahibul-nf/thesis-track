@@ -47,7 +47,7 @@ func (m *AuthMiddleware) Authenticate() fiber.Handler {
 
 		// Store user info in context
 		c.Locals("userID", userID)
-		c.Locals("role", role)
+		c.Locals("userRole", role)
 
 		return c.Next()
 	}
@@ -55,7 +55,7 @@ func (m *AuthMiddleware) Authenticate() fiber.Handler {
 
 func (m *AuthMiddleware) RequireRole(roles ...string) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		userRole := c.Locals("role").(string)
+		userRole := c.Locals("userRole").(string)
 
 		// Check if user's role is in the allowed roles
 		for _, role := range roles {

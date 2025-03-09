@@ -3,9 +3,9 @@ package handler
 import (
 	"net/http"
 
+	"thesis-track/internal/application/middleware"
 	"thesis-track/internal/domain/entity"
 	"thesis-track/internal/domain/service"
-	"thesis-track/internal/application/middleware"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
@@ -100,22 +100,32 @@ func (h *AdminHandler) GetAdminByID(c *fiber.Ctx) error {
 	return c.JSON(admin)
 }
 
-func (h *AdminHandler) GetAllAdmins(c *fiber.Ctx) error {
-	admins, err := h.adminService.GetAllAdmins(c.Context())
+func (h *AdminHandler) GetAllUsers(c *fiber.Ctx) error {
+	students, lectures, err := h.adminService.GetAllUsers(c.Context())
 	if err != nil {
 		return c.Status(http.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
 		})
-	}
+	}	
 
-	return c.JSON(admins)
+	totalUsers := len(students) + len(lectures)
+
+	return c.JSON(fiber.Map{
+		"data": fiber.Map{
+			"count": totalUsers,
+			"students": students,
+			"lectures": lectures,
+		},
+	})
 }
 
 // RegisterRoutes registers all admin routes
 func (h *AdminHandler) RegisterRoutes(app fiber.Router) {
-	admin := app.Group("/admin")
+	// Public routes
+	app.Get("/users", h.GetAllUsers)
 
 	// Protected routes
+	admin := app.Group("/admin")
 	admin.Use(h.authMiddleware.Authenticate())
 	admin.Use(h.authMiddleware.RequireAdmin())
 
@@ -124,7 +134,6 @@ func (h *AdminHandler) RegisterRoutes(app fiber.Router) {
 	admin.Put("/:id", h.UpdateAdmin) 
 	admin.Delete("/:id", h.DeleteAdmin)
 	admin.Get("/:id", h.GetAdminByID)
-	admin.Get("/", h.GetAllAdmins)
 
 	// Student management
 	// admin.Delete("/students/:id", h.DeleteStudent)

@@ -60,7 +60,7 @@ func main() {
 	thesisService := service.NewThesisService(thesisRepo, thesisLectureRepo, studentRepo, lectureRepo, progressRepo, emailService)
 	progressService := service.NewProgressService(progressRepo, thesisRepo, commentRepo, studentRepo, lectureRepo, emailService)
 	documentService := service.NewDocumentService(thesisRepo, progressRepo, supabase, emailService)
-	adminService := service.NewAdminService(adminRepo, studentRepo, lectureRepo, thesisRepo)
+	adminService := service.NewAdminService(adminRepo, studentRepo, lectureRepo, thesisRepo, supabase)
 	
 	// Create and start server
 	srv := server.NewServer(

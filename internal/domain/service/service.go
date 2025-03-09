@@ -33,7 +33,7 @@ type AdminService interface {
 	DeleteAdmin(ctx context.Context, id uuid.UUID) error
 	GetAdminByID(ctx context.Context, id uuid.UUID) (*entity.Admin, error)
 	GetAdminByEmail(ctx context.Context, email string) (*entity.Admin, error)
-	GetAllAdmins(ctx context.Context) ([]entity.Admin, error)	
+	GetAllUsers(ctx context.Context) ([]entity.Student, []entity.Lecture, error)
 } 
 
 type ThesisService interface {
@@ -49,6 +49,7 @@ type ThesisService interface {
 	ApproveThesisForDefense(ctx context.Context, thesisID, lectureID uuid.UUID) error
 	ApproveThesisForFinalize(ctx context.Context, thesisID, lectureID uuid.UUID) error
 	CalculateThesisProgress(ctx context.Context, thesis *entity.Thesis, progress []entity.Progress) (*entity.ThesisProgress, error)
+	GetThesesByLectureID(ctx context.Context, lectureID uuid.UUID, lectureRole string) ([]entity.Thesis, error)
 }
 
 type ProgressService interface {

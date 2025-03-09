@@ -171,6 +171,7 @@ Submit a new thesis.
   "title": "string",
   "abstract": "string",
   "research_field": "string",
+  "supervisor_id": "uuid",
 }
 ```
 
@@ -222,7 +223,59 @@ Submit a new thesis.
 }
 ```
 
-### Get Thesis
+### Get My Theses
+
+Get theses based on user's role.
+
+**Endpoint**: `GET /theses/me`
+
+**Auth**: Required
+
+**Response (200)**:
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "title": "string",
+      "abstract": "string",
+      "research_field": "string",
+      "status": "string",
+      "student_id": "uuid",
+      "created_at": "timestamp",
+      "updated_at": "timestamp",
+      "student": {
+        "id": "uuid",
+        "name": "string",
+        "nim": "string",
+        "email": "string",
+        "department": "string",
+      },
+      "supervisors": [
+        {
+          "id": "uuid",
+          "name": "string",
+          "email": "string",  
+          "nidn": "string",
+          "department": "string",
+        }
+      ],
+      "examiners": [
+        {
+          "id": "uuid",
+          "name": "string",
+          "email": "string",
+          "nidn": "string",
+          "department": "string",
+        }
+      ]
+    }
+  ]
+}
+```
+
+### Get Thesis Details
 
 Get thesis details by ID.
 
