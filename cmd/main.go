@@ -12,10 +12,12 @@ import (
 )
 
 func main() {
+	// ! -- Remove this when deploying to production
 	// Load configuration
-	if err := config.LoadConfig(); err != nil {
-		log.Fatal("Failed to load config:", err)
-	}
+	// if err := config.LoadConfig(); err != nil {
+	// 	log.Fatal("Failed to load config:", err)
+	// }
+	// ! -- End of Remove this when deploying to production
 
 	// Validate configuration
 	if err := config.ValidateConfig(); err != nil {
