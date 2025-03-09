@@ -102,4 +102,23 @@ func (r *thesisRepository) UpdateStatus(ctx context.Context, id uuid.UUID, statu
 		Model(&entity.Thesis{}).
 		Where("id = ?", id).
 		Update("status", status).Error
-} 
+}
+
+func (r *thesisRepository) FindByLectureID(ctx context.Context, lectureID uuid.UUID, lectureRole string) ([]entity.Thesis, error) {
+	var theses []entity.Thesis
+	err := r.db.WithContext(ctx).
+		Preload("Student").
+		Preload("Supervisor").
+		Preload("ThesisLectures").
+		Preload("ThesisLectures.Lecture").
+		Joins("JOIN thesis_lectures ON theses.id = thesis_lectures.thesis_id").
+		Where("thesis_lectures.lecture_id = ? AND thesis_lectures.role = ?", lectureID, lectureRole).
+		Find(&theses).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return theses, nil
+}

@@ -7,6 +7,7 @@ import (
 	"thesis-track/internal/domain/repository"
 
 	"github.com/google/uuid"
+	"github.com/supabase-community/supabase-go"
 )
 
 type adminService struct {
@@ -14,6 +15,7 @@ type adminService struct {
 	studentRepo  repository.StudentRepository
 	lectureRepo  repository.LectureRepository
 	thesisRepo   repository.ThesisRepository
+	supabase     *supabase.Client
 }
 
 func NewAdminService(
@@ -21,12 +23,14 @@ func NewAdminService(
 	studentRepo repository.StudentRepository,
 	lectureRepo repository.LectureRepository,
 	thesisRepo repository.ThesisRepository,
+	supabase *supabase.Client,
 ) *adminService {
 	return &adminService{
 		adminRepo:    adminRepo,
 		studentRepo:  studentRepo,
 		lectureRepo:  lectureRepo,
 		thesisRepo:   thesisRepo,
+		supabase:     supabase,
 	}
 }
 
@@ -50,10 +54,18 @@ func (s *adminService) GetAdminByEmail(ctx context.Context, email string) (*enti
 	return s.adminRepo.FindByEmail(ctx, email)
 }
 
-func (s *adminService) GetAllAdmins(ctx context.Context) ([]entity.Admin, error) {
-	return s.adminRepo.FindAll(ctx)
-}
+func (s *adminService) GetAllUsers(ctx context.Context) ([]entity.Student, []entity.Lecture, error) {
+	students, err := s.studentRepo.FindAll(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	lectures, err := s.lectureRepo.FindAll(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 
+	return students, lectures, nil
+}
 // Admin specific operations
 func (s *adminService) CreateStudent(ctx context.Context, student *entity.Student) error {
 	return s.studentRepo.Create(ctx, student)
