@@ -149,6 +149,10 @@ func (s *thesisService) GetAllTheses(ctx context.Context) ([]entity.Thesis, erro
 	return s.thesisRepo.FindAll(ctx)
 }
 
+func (s *thesisService) GetThesesByLectureID(ctx context.Context, lectureID uuid.UUID, lectureRole string) ([]entity.Thesis, error) {
+	return s.thesisRepo.FindByLectureID(ctx, lectureID, lectureRole)
+}
+
 func (s *thesisService) UpdateThesisStatus(ctx context.Context, id uuid.UUID, status string) error {
 	// Validate status
 	validStatuses := entity.ThesisStatuses

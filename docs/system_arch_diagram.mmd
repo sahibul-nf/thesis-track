@@ -1,0 +1,21 @@
+graph TB
+    Client[Flutter Mobile App]
+    API[Thesis Track API]
+    DB[(PostgreSQL)]
+    Storage[Supabase Storage]
+    Auth[Supabase Auth]
+    Email[SMTP Email Service]
+
+    Client --> API
+    API --> DB
+    API --> Storage
+    API --> Auth
+    API --> Email
+
+    subgraph Backend Services
+        API
+        DB
+        Storage
+        Auth
+        Email
+    end
