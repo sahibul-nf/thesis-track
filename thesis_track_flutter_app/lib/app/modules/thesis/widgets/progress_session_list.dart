@@ -57,7 +57,6 @@ class _ProgressSessionListState extends State<ProgressSessionList> {
           // Progress List
           if (progresses.isNotEmpty)
             ListView.separated(
-              physics: const NeverScrollableScrollPhysics(),
               padding: EdgeInsets.fromLTRB(
                 AppTheme.spaceLG,
                 AppTheme.spaceLG,
