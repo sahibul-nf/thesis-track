@@ -23,7 +23,7 @@ abstract class RouteLocation {
   static const String myThesis = '/thesis/me';
   static const String thesis = '/thesis';
   static const String thesisDetail = '/thesis/:id';
-  static const String thesisCreate = '/thesis/create';
+  static const String thesisCreate = 'thesis/create';
   static const String thesisDocuments = '/thesis/:id/documents';
 
   // Progress Routes
@@ -37,6 +37,7 @@ abstract class RouteLocation {
   static const String documents = '/admin/docs';
 
   /// Helper methods
+  static String get toCreateThesis => '/$thesisCreate';
   static String toThesisDetail(String thesisId) => '$thesis/$thesisId';
   static String toProgressDetail(String progressId) => '$progress/$progressId';
   static String toProgressCreate(String thesisId) =>
@@ -80,7 +81,22 @@ class AppRoutes {
             path: RouteLocation.home,
             name: 'home',
             builder: (context, state) => const HomeScreen(),
-            routes: const [],
+            routes: [
+              GoRoute(
+                parentNavigatorKey: _rootNavigatorKey,
+                path: RouteLocation.thesisCreate,
+                name: 'thesis_create',
+                // builder: (context, state) => const ThesisCreateScreen(),
+                pageBuilder: (context, state) {
+                  return RawDialogPage(
+                    barrierDismissible: true,
+                    barrierColor:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    child: const ThesisCreateScreen(),
+                  );
+                },
+              ),
+            ],
           ),
           // Thesis Routes
           GoRoute(
@@ -121,12 +137,7 @@ class AppRoutes {
               }
               return ThesisDetailScreen(thesis: thesis);
             },
-          ),
-          GoRoute(
-            path: RouteLocation.thesisCreate,
-            name: 'thesis_create',
-            builder: (context, state) => const ThesisCreateScreen(),
-          ),
+          ),          
 
           // Progress Routes
           GoRoute(

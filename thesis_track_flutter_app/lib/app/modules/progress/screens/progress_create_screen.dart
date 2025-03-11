@@ -232,7 +232,6 @@ class _ProgressCreateScreenState extends State<ProgressCreateScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
             Container(
               padding: EdgeInsets.all(AppTheme.spaceLG),
               child: Row(

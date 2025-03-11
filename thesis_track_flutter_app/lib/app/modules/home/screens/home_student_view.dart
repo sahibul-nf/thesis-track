@@ -37,7 +37,7 @@ class HomeStudentView extends StatelessWidget {
               icon: Iconsax.document_text,
               actionLabel: 'Create New Thesis',
               buttonSize: Size(120, AppTheme.buttonMedium),
-              onAction: () => context.go('/thesis/create'),
+              onAction: () => context.go(RouteLocation.toCreateThesis),
             ),
           ),
         );

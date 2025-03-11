@@ -32,7 +32,7 @@ class ThesisScreen extends GetView<ThesisController> {
           actionLabel: actionLabel,
           onAction: () {
             if (isStudent) {
-              context.go(RouteLocation.thesisCreate);
+              context.go(RouteLocation.toCreateThesis);
             } else {
               controller.getMyTheses();
             }
