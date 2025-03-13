@@ -1,0 +1,31 @@
+stateDiagram-v2
+    [*] --> Login
+    Login --> Register: New User
+    Register --> Login: Success
+    
+    Login --> Dashboard: Success
+    
+    state Dashboard {
+        [*] --> Role
+        Role --> StudentView: Student
+        Role --> LecturerView: Lecturer
+        Role --> AdminView: Admin
+        
+        state StudentView {
+            [*] --> SubmitThesis
+            SubmitThesis --> TrackProgress
+            TrackProgress --> UploadDocuments
+        }
+        
+        state LecturerView {
+            [*] --> ReviewThesis
+            ReviewThesis --> ApproveProgress
+            ApproveProgress --> ProvideFeedback
+        }
+        
+        state AdminView {
+            [*] --> ManageUsers
+            ManageUsers --> AssignExaminers
+            AssignExaminers --> MonitorProgress
+        }
+    }
