@@ -105,29 +105,50 @@ class ThesisController extends GetxController {
     _thesisRepository = thesisRepository ?? ThesisRepository();
   }
 
+  final _allTheses = Rx<List<Thesis>>([]);
   final _myTheses = Rx<List<Thesis>>([]);
-  final _thesisProgress = Rxn<ThesisProgress>();
   final _isLoading = false.obs;
   final _error = Rxn<String>();
   final _otherTheses = <Thesis>[].obs;
   final _isCreating = false.obs;
   final _isApprovingForDefense = false.obs;
+  final _topProgressTheses = <Thesis>[].obs;
+  final _selectedYear = ''.obs;
+  final _isLoadingTopProgress = false.obs;
 
+  List<Thesis> get allTheses => _allTheses.value;
   List<Thesis> get myTheses => _myTheses.value;
-  ThesisProgress? get thesisProgress => _thesisProgress.value;
   bool get isLoading => _isLoading.value;
+  bool get isLoadingTopProgress => _isLoadingTopProgress.value;
   String? get error => _error.value;
   List<Thesis> get otherTheses => _otherTheses;
   bool get isCreating => _isCreating.value;
   bool get isApprovingForDefense => _isApprovingForDefense.value;
+  String get selectedYear => _selectedYear.value;
+  List<Thesis> get topProgressTheses => _topProgressTheses;
+  int get topProgressThesesCount => _topProgressTheses.length;
+  int get myTopProgressPosition => _topProgressTheses.indexWhere(
+        (thesis) => thesis.id == _myTheses.value.first.id,
+      );
 
   @override
   void onInit() {
     super.onInit();
     getMyTheses();
+    getAllTheses().then((_) => getTopProgressTheses());
+  }
 
-    // mock data for other theses
-    _otherTheses.value = mockOtherTheses;
+  Future<void> getAllTheses() async {
+    final result = await _thesisRepository.getAllTheses();
+    result.fold(
+      (failure) => _allTheses.value = [],
+      (theses) {
+        _allTheses.value = theses;
+        for (var thesis in theses) {
+          _progressController.getProgressesByThesis(thesis);
+        }
+      },
+    );
   }
 
   Future<String?> getMyTheses() async {
@@ -145,7 +166,6 @@ class ThesisController extends GetxController {
 
           if (_myTheses.value.isNotEmpty) {
             for (var thesis in _myTheses.value) {
-              getThesisProgress(thesis.id);
               _progressController.getProgressesByThesis(thesis);
             }
           }
@@ -168,7 +188,6 @@ class ThesisController extends GetxController {
         },
         (thesis) {
           // Get progress for the thesis
-          getThesisProgress(thesis.id);
           _progressController.getProgressesByThesis(thesis);
 
           // update the _myTheses list with the new thesis
@@ -306,22 +325,51 @@ class ThesisController extends GetxController {
     }
   }
 
-  Future<String?> getThesisProgress(String thesisId) async {
+  // Get unique years from theses
+  List<String?> get availableYears {
+    final years =
+        allTheses.map((thesis) => thesis.student.year).toSet().toList();
+    years.sort((a, b) => b!.compareTo(a!));
+    return years;
+  }
+
+  // Get top progress theses filtered by year
+  Future<void> getTopProgressTheses([String? year]) async {
     try {
-      _isLoading.value = true;
-      final result = await _thesisRepository.getThesisProgress(thesisId);
-      return result.fold(
-        (failure) {
-          _error.value = failure.message;
-          return failure.message;
-        },
-        (progress) {
-          _thesisProgress.value = progress;
-          return null;
-        },
-      );
+      _isLoadingTopProgress.value = true;
+      if (year != null) _selectedYear.value = year;
+
+      // Get date 6 months ago
+      final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+
+      // Filter theses from last 6 months
+      var filteredTheses = allTheses.where((thesis) {
+        // Check if thesis is active in last 6 months
+        final isActive = thesis.updatedAt.isAfter(sixMonthsAgo);
+
+        // Apply year filter if selected
+        final matchesYear =
+            selectedYear.isEmpty || thesis.student.year == selectedYear;
+
+        return isActive && matchesYear;
+      }).toList();
+
+      // Sort by progress percentage
+      filteredTheses.sort((a, b) {
+        final aProgress = a.thesisProgress?.totalProgress ?? 0;
+        final bProgress = b.thesisProgress?.totalProgress ?? 0;
+
+        // If progress is equal, sort by last update (most recent first)
+        if (aProgress == bProgress) {
+          return b.updatedAt.compareTo(a.updatedAt);
+        }
+
+        return bProgress.compareTo(aProgress);
+      });
+
+      _topProgressTheses.value = filteredTheses;
     } finally {
-      _isLoading.value = false;
+      _isLoadingTopProgress.value = false;
     }
   }
 }

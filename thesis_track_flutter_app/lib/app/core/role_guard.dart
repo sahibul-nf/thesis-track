@@ -1,3 +1,4 @@
+import 'package:get/get_rx/src/rx_types/rx_types.dart';
 import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
@@ -36,9 +37,9 @@ class RoleGuard {
 
   static bool canCreateThesis() {
     final user = getCurrentUser();
-    final role = user?.role;
-
     if (user == null) return false;
+
+    final role = user.role;
 
     return role == UserRole.student;
   }
@@ -131,13 +132,52 @@ class RoleGuard {
     return true;
   }
 
-  /// Approve Thesis Guard
+  /// Approve Proposal Defense Thesis Guard
   /// Supervisor and examiners can approve a thesis
-  static bool canApproveThesisForDefense(Thesis thesis, String lectureId) {
+  static RxBool canApproveThesisForProposalDefense(Thesis thesis) {
     final user = getCurrentUser();
-    final role = user?.role;
+    if (user == null) return RxBool(false);
 
+    final role = user.role;
+    var lectureId = user.id;
+
+    // Only lecturers can approve a thesis
+    if (role != UserRole.lecturer) return RxBool(false);
+
+    // Thesis must be in progress
+    // if (thesis.status != ThesisStatus.inProgress) return false;
+
+    // Lecturer must be a supervisor or examiner
+    var isSupervisor = thesis.supervisors.any((e) => e.user.id == lectureId);
+    var isExaminer = thesis.examiners.any((e) => e.user.id == lectureId);
+    if (!isSupervisor && !isExaminer) return RxBool(false);
+
+    // Supervisor or examiner must have at least progress session reviewed
+    var progressSessions = thesis.progresses;
+    if (progressSessions.isEmpty) return RxBool(false);
+
+    // Check if the progress session is reviewed
+    var isReviewed = progressSessions.any((e) =>
+        e.status.value.toLowerCase() == 'reviewed' &&
+        e.reviewerId == lectureId);
+    if (!isReviewed) return RxBool(false);
+
+    // Check if the lecturer has approved the thesis for proposal defense
+    var isApprovedForProposalDefense = thesis.supervisors.any(
+        (e) => e.user.id == lectureId && e.proposalDefenseApprovedAt != null);
+    if (isApprovedForProposalDefense) return RxBool(false);
+
+    return RxBool(true);
+  }
+
+  /// Approve Final Defense Thesis Guard
+  /// Supervisor and examiners can approve a thesis
+  static bool canApproveThesisForFinalDefense(Thesis thesis) {
+    final user = getCurrentUser();
     if (user == null) return false;
+
+    final role = user.role;
+    var lectureId = user.id;
 
     // Only lecturers can approve a thesis
     if (role != UserRole.lecturer) return false;
@@ -160,10 +200,8 @@ class RoleGuard {
         e.reviewerId == lectureId);
     if (!isReviewed) return false;
 
-    // Check if the lecturer has approved the thesis for proposal defense
-    var isApprovedForProposalDefense = thesis.supervisors.any(
-        (e) => e.user.id == lectureId && e.proposalDefenseApprovedAt != null);
-    if (isApprovedForProposalDefense) return false;
+    // Thesis must be have ready Proposal Defense
+    if (!thesis.isProposalReady) return false;
 
     // Check if the lecturer has approved the thesis for final defense
     var isApprovedForFinalDefense = thesis.supervisors
@@ -219,7 +257,7 @@ class RoleGuard {
     if (!isUnderReview || !isFinalDocUploaded) return false;
 
     return true;
-  }  
+  }
 
   static bool canAssignReviewer(String userId) {
     // ONLY owner of the thesis can assign reviewer

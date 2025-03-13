@@ -11,6 +11,7 @@ import 'package:thesis_track_flutter_app/app/modules/home/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/thesis_screen.dart';
+import 'package:thesis_track_flutter_app/app/modules/thesis/screens/top_progress_view.dart';
 import 'package:thesis_track_flutter_app/app/widgets/raw_dialog_page.dart';
 
 abstract class RouteLocation {
@@ -25,6 +26,7 @@ abstract class RouteLocation {
   static const String thesisDetail = '/thesis/:id';
   static const String thesisCreate = 'thesis/create';
   static const String thesisDocuments = '/thesis/:id/documents';
+  static const String topProgress = '/top-progress';
 
   // Progress Routes
   static const String progress = '/progress';
@@ -137,8 +139,12 @@ class AppRoutes {
               }
               return ThesisDetailScreen(thesis: thesis);
             },
-          ),          
-
+          ),     
+          GoRoute(
+            path: RouteLocation.topProgress,
+            name: 'top_progress',
+            builder: (context, state) => const TopProgressView(),
+          ),     
           // Progress Routes
           GoRoute(
             path: RouteLocation.progressDetail,

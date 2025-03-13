@@ -51,7 +51,7 @@ class HomeStudentView extends StatelessWidget {
               .difference(thesis?.submissionDate ?? DateTime.now())
               .inDays;
 
-      final thesisProgress = thesisController.thesisProgress;
+      final thesisProgress = thesis?.thesisProgress;
       final totalPercentageProgress = thesisProgress?.totalProgress;
       final initialPhase = thesisProgress?.details.initialPhase;
       final proposalPhase = thesisProgress?.details.proposalPhase;
@@ -149,7 +149,7 @@ class HomeStudentView extends StatelessWidget {
                 // Current Phase & Other Progress
                 const Expanded(
                   child: TopProgressCard(
-                    status: FeatureStatus.beta,
+                    // status: FeatureStatus.beta,
                   ),
                 ),
               ],

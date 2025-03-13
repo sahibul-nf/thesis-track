@@ -7,7 +7,6 @@ import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/controllers/progress_controller.dart';
-import 'package:thesis_track_flutter_app/app/widgets/app_bar.dart';
 import 'package:thesis_track_flutter_app/app/widgets/card.dart';
 import 'package:thesis_track_flutter_app/app/widgets/empty_state.dart';
 import 'package:thesis_track_flutter_app/app/widgets/skeleton.dart';
@@ -55,9 +54,6 @@ class _ProgressListScreenState extends State<ProgressListScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: const ThesisAppBar(
-        title: 'Progress List',
-      ),
       body: _buildContent(theme),
       floatingActionButton: _authController.user?.role == UserRole.student
           ? FloatingActionButton.extended(
