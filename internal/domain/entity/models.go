@@ -90,6 +90,7 @@ type Thesis struct {
 	Student        Student         `json:"student" gorm:"foreignKey:StudentID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	Supervisor     Lecture         `json:"main_supervisor" gorm:"foreignKey:SupervisorID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	ThesisLectures []ThesisLecture `json:"-" gorm:"foreignKey:ThesisID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	ThesisProgress *ThesisProgress `json:"thesis_progress" gorm:"-"`
 }
 
 type ProgressStatus string
@@ -143,7 +144,7 @@ type ThesisLecture struct {
 	FinalizeApprovedAt        *time.Time    `json:"finalize_approved_at"`              // Null jika belum disetujui for examiners to finalize the thesis
 
 	// Relations
-	Thesis  Thesis  `json:"thesis" gorm:"foreignKey:ThesisID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
+	Thesis  Thesis  `json:"-" gorm:"foreignKey:ThesisID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 	Lecture Lecture `json:"lecture" gorm:"foreignKey:LectureID;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
 }
 
