@@ -1,0 +1,6 @@
+stateDiagram-v2
+    [*] --> Pending: Submit Thesis
+    Pending --> InProgress: Admin Approval
+    InProgress --> UnderReview: Examiner Review
+    UnderReview --> Completed: Admin Approval
+    Completed --> [*]

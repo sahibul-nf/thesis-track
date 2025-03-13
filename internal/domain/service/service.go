@@ -38,7 +38,7 @@ type AdminService interface {
 
 type ThesisService interface {
 	SubmitProposalThesis(ctx context.Context, req *dto.ThesisRequest, studentID uuid.UUID, supervisorID uuid.UUID) (*entity.Thesis, error)
-	UpdateThesis(ctx context.Context, thesis *entity.Thesis) error
+	UpdateThesis(ctx context.Context, thesis *entity.Thesis) (*entity.Thesis, error)
 	DeleteThesis(ctx context.Context, id uuid.UUID) error
 	GetThesisByID(ctx context.Context, id uuid.UUID) (*entity.Thesis, error)
 	GetThesesByStudentID(ctx context.Context, studentID uuid.UUID) ([]entity.Thesis, error)

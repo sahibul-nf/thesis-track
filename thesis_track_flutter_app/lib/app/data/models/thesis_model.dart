@@ -3,33 +3,6 @@ import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 
-// enum ThesisStatus {
-//   pending('Pending'),
-//   inProgress('In Progress'),
-//   underReview('Under Review'),
-//   completed('Completed');
-
-//   final String name;
-
-//   const ThesisStatus(this.name);
-
-//   static ThesisStatus fromString(String? value) {
-//     if (value == null) return pending;
-//     return ThesisStatus.values.firstWhere((e) => e.name == value);
-//   }
-
-//   /// Get color of status
-//   static Color getColor(ThesisStatus status) {
-//     return switch (status) {
-//       pending => Colors.orange.shade300, // Warm warning color for pending
-//       inProgress => Colors.blue.shade400, // Active color for in progress
-//       underReview =>
-//         Colors.purple.shade300, // Distinguished color for review phase
-//       completed => Colors.green.shade400, // Success color for completion
-//     };
-//   }
-// }
-
 enum ThesisStatus {
   unknown,
   pending,
@@ -84,6 +57,7 @@ class Thesis {
   final User mainSupervisor;
   final List<ThesisLecture> supervisors;
   final List<ThesisLecture> examiners;
+  final ThesisProgress? thesisProgress;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -105,6 +79,7 @@ class Thesis {
     required this.mainSupervisor,
     required this.supervisors,
     required this.examiners,
+    this.thesisProgress,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -113,12 +88,12 @@ class Thesis {
   var progresses = RxList<ProgressModel>([]);
 
   /// List of members (supervisors, examiners, student)
-  List<User> get members {
-    return [
-      ...supervisors.map((e) => e.user),
-      ...examiners.map((e) => e.user),
-      student,
-    ];
+  ({int total, User student, List<ThesisLecture> lecturers}) get members {
+    return (
+      total: [...supervisors, ...examiners].length + 1,
+      student: student,
+      lecturers: [...supervisors, ...examiners],
+    );
   }
 
   /// Get all lecturers
@@ -133,7 +108,8 @@ class Thesis {
     for (var e in json['supervisors'] as List<dynamic>) {
       supervisors.add(
         ThesisLecture(
-          user: User.fromJson(e['lecture'] as Map<String, dynamic>),
+          user: User.fromJson(e['lecture'] as Map<String, dynamic>,
+              role: e['role']),
           role: ThesisLectureRole.fromString(e['role'] as String),
           examinerType: e['examiner_type'] != null
               ? ThesisLectureExaminerType.fromString(
@@ -155,7 +131,8 @@ class Thesis {
     for (var e in json['examiners'] as List<dynamic>) {
       examiners.add(
         ThesisLecture(
-          user: User.fromJson(e['lecture'] as Map<String, dynamic>),
+          user: User.fromJson(e['lecture'] as Map<String, dynamic>,
+              role: e['role']),
           role: ThesisLectureRole.fromString(e['role'] as String),
           examinerType: e['examiner_type'] != null
               ? ThesisLectureExaminerType.fromString(
@@ -195,6 +172,10 @@ class Thesis {
       examiners: examiners,
       mainSupervisor:
           User.fromJson(json['main_supervisor'] as Map<String, dynamic>),
+      thesisProgress: json['thesis_progress'] != null
+          ? ThesisProgress.fromJson(
+              json['thesis_progress'] as Map<String, dynamic>)
+          : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -219,6 +200,7 @@ class Thesis {
       'main_supervisor': mainSupervisor.toJson(),
       'supervisors': supervisors.map((e) => e.toJson()).toList(),
       'examiners': examiners.map((e) => e.toJson()).toList(),
+      'thesis_progress': thesisProgress?.toJson(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -242,6 +224,7 @@ class Thesis {
     User? mainSupervisor,
     List<ThesisLecture>? supervisors,
     List<ThesisLecture>? examiners,
+    ThesisProgress? thesisProgress,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -263,6 +246,7 @@ class Thesis {
       mainSupervisor: mainSupervisor ?? this.mainSupervisor,
       supervisors: supervisors ?? this.supervisors,
       examiners: examiners ?? this.examiners,
+      thesisProgress: thesisProgress ?? this.thesisProgress,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -339,11 +323,18 @@ enum ThesisLectureExaminerType {
   proposalDefenseExaminer('ProposalDefenseExaminer'),
   finalDefenseExaminer('FinalDefenseExaminer');
 
-  final String name;
-  const ThesisLectureExaminerType(this.name);
+  final String type;
+  const ThesisLectureExaminerType(this.type);
 
   static ThesisLectureExaminerType fromString(String value) {
-    return ThesisLectureExaminerType.values.firstWhere((e) => e.name == value);
+    return ThesisLectureExaminerType.values.firstWhere((e) => e.type == value);
+  }
+
+  String get name {
+    return switch (this) {
+      proposalDefenseExaminer => 'Proposal Defense Examiner',
+      finalDefenseExaminer => 'Final Defense Examiner',
+    };
   }
 }
 
@@ -366,7 +357,8 @@ class ThesisLecture {
 
   factory ThesisLecture.fromJson(Map<String, dynamic> json) {
     return ThesisLecture(
-      user: User.fromJson(json['user'] as Map<String, dynamic>),
+      user: User.fromJson(json['user'] as Map<String, dynamic>,
+          role: json['role'] as String),
       role: ThesisLectureRole.fromString(json['role'] as String),
       examinerType: json['examiner_type'] != null
           ? ThesisLectureExaminerType.fromString(

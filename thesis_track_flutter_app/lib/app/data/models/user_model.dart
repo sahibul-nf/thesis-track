@@ -3,7 +3,12 @@ import 'package:flutter/material.dart';
 enum UserRole {
   student('Student', Color(0xFF2196F3)), // Bright blue for students - learning/growth
   lecturer('Lecture', Color(0xFF009688)), // Teal for lecturers - wisdom/teaching
-  admin('Admin', Color(0xFF673AB7)); // Deep purple for admins - authority/control
+  admin(
+      'Admin', Color(0xFF673AB7)), // Deep purple for admins - authority/control
+  supervisor('Supervisor',
+      Color(0xFF4CAF50)), // Green for supervisors - guidance/mentorship
+  examiner('Examiner',
+      Color(0xFF8BC34A)); // Light Green for examiners - evaluation/review
 
   final String name;
   final Color color;
@@ -13,8 +18,7 @@ enum UserRole {
   static UserRole? fromString(String? role) {
     if (role == null) return null;
     return UserRole.values.firstWhere(
-      (e) => e.name.toLowerCase() == role.toLowerCase(),
-      orElse: () => UserRole.student,
+      (e) => e.name.toLowerCase() == role.toLowerCase()
     );
   }
 }

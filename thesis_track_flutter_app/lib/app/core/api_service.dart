@@ -1,8 +1,17 @@
 import 'package:dio/dio.dart' as d;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
+
+class ApiConfig {
+  static const String _apiBaseUrl =
+      'https://thesis-track-production.up.railway.app/api/v1';
+  static const String _apiBaseUrlDev = 'http://localhost:8080/api/v1';
+  static const String apiTimeout = '10000';
+
+  static String get apiBaseUrl => kDebugMode ? _apiBaseUrlDev : _apiBaseUrl;
+}
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -15,15 +24,15 @@ class ApiService {
   ApiService._internal() {
     dio = d.Dio(
       d.BaseOptions(
-        baseUrl: dotenv.env['API_BASE_URL'] ?? 'http://localhost:8080/api/v1',
+        baseUrl: ApiConfig.apiBaseUrl,
         connectTimeout: Duration(
           milliseconds: int.parse(
-            dotenv.env['API_TIMEOUT'] ?? '30000',
+            ApiConfig.apiTimeout,
           ),
         ),
         receiveTimeout: Duration(
           milliseconds: int.parse(
-            dotenv.env['API_TIMEOUT'] ?? '30000',
+            ApiConfig.apiTimeout,
           ),
         ),
         headers: {'Content-Type': 'application/json'},

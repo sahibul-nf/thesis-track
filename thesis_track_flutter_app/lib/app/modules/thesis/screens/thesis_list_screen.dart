@@ -167,7 +167,6 @@ class ThesisListScreen extends GetView<ThesisController> {
                         ),
                       ),
                       // Progress Info
-                      if (thesis.status != ThesisStatus.pending)
                         Padding(
                           padding: EdgeInsets.only(left: AppTheme.spaceSM),
                           child: Text.rich(
@@ -181,7 +180,7 @@ class ThesisListScreen extends GetView<ThesisController> {
                                   ),
                                 ),
                                 TextSpan(
-                                  text: 'Progress',
+                                text: 'Sessions',
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
@@ -197,7 +196,7 @@ class ThesisListScreen extends GetView<ThesisController> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: '${thesis.members.length} ',
+                                text: '${thesis.members.total} ',
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,

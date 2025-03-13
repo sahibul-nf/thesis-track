@@ -80,7 +80,7 @@ func (s *documentService) UploadDraftDocument(ctx context.Context, userID, thesi
 
 	// Update thesis with document URL
 	thesis.DraftDocumentURL = publicURL
-	err = s.thesisRepo.Update(ctx, thesis)
+	_, err = s.thesisRepo.Update(ctx, thesis)
 	if err != nil {
 		return "", fmt.Errorf("failed to update thesis with document URL: %w", err)
 	}
@@ -132,7 +132,7 @@ func (s *documentService) UploadFinalDocument(ctx context.Context, userID, thesi
 
 	// Update thesis with document URL
 	thesis.FinalDocumentURL = publicURL
-	err = s.thesisRepo.Update(ctx, thesis)
+	_, err = s.thesisRepo.Update(ctx, thesis)
 	if err != nil {
 		return "", fmt.Errorf("failed to update thesis with document URL: %w", err)
 	}

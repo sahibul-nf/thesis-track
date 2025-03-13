@@ -79,6 +79,17 @@ class AdminController extends GetxController {
     return double.parse((averageDays).toStringAsFixed(1));
   }
 
+  // -- Success Rate --
+  double get successRate {
+    final totalTheses = _thesisController.myTheses.length;
+    final completedTheses = _thesisController.myTheses
+        .where((thesis) => thesis.status == ThesisStatus.completed)
+        .toList();
+    final successRate =
+        totalTheses != 0 ? completedTheses.length / totalTheses : 0.0;
+    return successRate;
+  }
+
   // -- Loading State --
   final _isUserLoading = false.obs;
   bool get isUserLoading => _isUserLoading.value;

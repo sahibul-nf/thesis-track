@@ -37,7 +37,7 @@ class HomeStudentView extends StatelessWidget {
               icon: Iconsax.document_text,
               actionLabel: 'Create New Thesis',
               buttonSize: Size(120, AppTheme.buttonMedium),
-              onAction: () => context.go('/thesis/create'),
+              onAction: () => context.go(RouteLocation.toCreateThesis),
             ),
           ),
         );
@@ -51,7 +51,7 @@ class HomeStudentView extends StatelessWidget {
               .difference(thesis?.submissionDate ?? DateTime.now())
               .inDays;
 
-      final thesisProgress = thesisController.thesisProgress;
+      final thesisProgress = thesis?.thesisProgress;
       final totalPercentageProgress = thesisProgress?.totalProgress;
       final initialPhase = thesisProgress?.details.initialPhase;
       final proposalPhase = thesisProgress?.details.proposalPhase;
@@ -149,7 +149,7 @@ class HomeStudentView extends StatelessWidget {
                 // Current Phase & Other Progress
                 const Expanded(
                   child: TopProgressCard(
-                    status: FeatureStatus.beta,
+                    // status: FeatureStatus.beta,
                   ),
                 ),
               ],

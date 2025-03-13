@@ -1,0 +1,71 @@
+sequenceDiagram
+    actor Student
+    actor Supervisor
+    actor Examiner
+    actor Admin
+    participant System
+    participant Email
+
+    %% Initial Submission
+    Student->>System: Submit Thesis Proposal
+    System->>Email: Notify Admin
+    System->>Email: Notify Supervisor
+    Note over System: Status: PENDING
+
+    %% Admin Initial Review
+    Admin->>System: Review Initial Submission
+    alt Rejected
+        System->>Email: Notify Student (Rejection)
+        System->>Student: Return for Revision
+    else Approved
+        System->>System: Update Status to IN_PROGRESS
+        System->>Email: Notify All Parties
+    end
+
+    %% Proposal Phase
+    rect rgb(200, 220, 255)
+        Note over Student,System: Proposal Development Phase
+        loop Until Proposal Ready
+            Student->>System: Submit Progress Update
+            System->>Supervisor: Review Progress
+            alt Needs Revision
+                Supervisor->>System: Request Revision
+                System->>Student: Revision Required
+            else Approved
+                Supervisor->>System: Approve Progress
+            end
+        end
+    end
+
+    %% Research Phase
+    rect rgb(220, 255, 220)
+        Note over Student,System: Research Implementation Phase
+        loop Until Research Complete
+            Student->>System: Submit Research Progress
+            System->>Supervisor: Review Progress
+            Supervisor->>System: Provide Feedback
+            System->>Student: Forward Feedback
+        end
+    end
+
+    %% Final Phase
+    rect rgb(255, 220, 220)
+        Note over Student,System: Final Phase
+        Student->>System: Submit Final Draft
+        System->>Supervisor: Review Final Draft
+        System->>Examiner: Review Final Draft
+
+        par Parallel Reviews
+            Supervisor->>System: Submit Final Review
+            Examiner->>System: Submit Final Review
+        end
+
+        alt Needs Revision
+            System->>Student: Return for Final Revision
+        else All Approved
+            System->>Admin: Ready for Completion Review
+            Admin->>System: Mark as Complete
+            System->>Email: Notify All Parties of Completion
+            Note over System: Status: COMPLETED
+        end
+    end

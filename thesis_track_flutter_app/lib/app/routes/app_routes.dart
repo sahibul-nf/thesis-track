@@ -11,6 +11,7 @@ import 'package:thesis_track_flutter_app/app/modules/home/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/thesis_screen.dart';
+import 'package:thesis_track_flutter_app/app/modules/thesis/screens/top_progress_view.dart';
 import 'package:thesis_track_flutter_app/app/widgets/raw_dialog_page.dart';
 
 abstract class RouteLocation {
@@ -23,8 +24,9 @@ abstract class RouteLocation {
   static const String myThesis = '/thesis/me';
   static const String thesis = '/thesis';
   static const String thesisDetail = '/thesis/:id';
-  static const String thesisCreate = '/thesis/create';
+  static const String thesisCreate = 'thesis/create';
   static const String thesisDocuments = '/thesis/:id/documents';
+  static const String topProgress = '/top-progress';
 
   // Progress Routes
   static const String progress = '/progress';
@@ -37,6 +39,7 @@ abstract class RouteLocation {
   static const String documents = '/admin/docs';
 
   /// Helper methods
+  static String get toCreateThesis => '/$thesisCreate';
   static String toThesisDetail(String thesisId) => '$thesis/$thesisId';
   static String toProgressDetail(String progressId) => '$progress/$progressId';
   static String toProgressCreate(String thesisId) =>
@@ -80,7 +83,22 @@ class AppRoutes {
             path: RouteLocation.home,
             name: 'home',
             builder: (context, state) => const HomeScreen(),
-            routes: const [],
+            routes: [
+              GoRoute(
+                parentNavigatorKey: _rootNavigatorKey,
+                path: RouteLocation.thesisCreate,
+                name: 'thesis_create',
+                // builder: (context, state) => const ThesisCreateScreen(),
+                pageBuilder: (context, state) {
+                  return RawDialogPage(
+                    barrierDismissible: true,
+                    barrierColor:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    child: const ThesisCreateScreen(),
+                  );
+                },
+              ),
+            ],
           ),
           // Thesis Routes
           GoRoute(
@@ -121,13 +139,12 @@ class AppRoutes {
               }
               return ThesisDetailScreen(thesis: thesis);
             },
-          ),
+          ),     
           GoRoute(
-            path: RouteLocation.thesisCreate,
-            name: 'thesis_create',
-            builder: (context, state) => const ThesisCreateScreen(),
-          ),
-
+            path: RouteLocation.topProgress,
+            name: 'top_progress',
+            builder: (context, state) => const TopProgressView(),
+          ),     
           // Progress Routes
           GoRoute(
             path: RouteLocation.progressDetail,

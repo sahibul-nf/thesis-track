@@ -36,7 +36,7 @@ type AdminRepository interface {
 
 type ThesisRepository interface {
 	Create(ctx context.Context, thesis *entity.Thesis) (*entity.Thesis, error)
-	Update(ctx context.Context, thesis *entity.Thesis) error
+	Update(ctx context.Context, thesis *entity.Thesis) (*entity.Thesis, error)
 	Delete(ctx context.Context, id uuid.UUID) error
 	FindByID(ctx context.Context, id uuid.UUID) (*entity.Thesis, error)
 	FindByStudentID(ctx context.Context, studentID uuid.UUID) ([]entity.Thesis, error)

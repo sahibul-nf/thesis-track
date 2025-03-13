@@ -37,8 +37,22 @@ func (r *thesisRepository) Create(ctx context.Context, thesis *entity.Thesis) (*
 	return thesis, nil
 }
 
-func (r *thesisRepository) Update(ctx context.Context, thesis *entity.Thesis) error {
-	return r.db.WithContext(ctx).Save(thesis).Error
+func (r *thesisRepository) Update(ctx context.Context, thesis *entity.Thesis) (*entity.Thesis, error) {
+	if err := r.db.WithContext(ctx).Save(thesis).Error; err != nil {
+		return nil, err
+	}
+
+	// Reload the thesis with all relationships
+	if err := r.db.WithContext(ctx).
+		Preload("Student").
+		Preload("Supervisor").
+		Preload("ThesisLectures").
+		Preload("ThesisLectures.Lecture").
+		First(thesis, thesis.ID).Error; err != nil {
+		return nil, err
+	}
+
+	return thesis, nil
 }
 
 func (r *thesisRepository) Delete(ctx context.Context, id uuid.UUID) error {

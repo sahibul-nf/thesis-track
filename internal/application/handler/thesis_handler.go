@@ -190,7 +190,7 @@ func (h *ThesisHandler) UpdateThesis(c *fiber.Ctx) error {
 	thesis.SupervisorID = supervisorID
 
 	// Update thesis
-	err = h.thesisService.UpdateThesis(c.Context(), thesis)
+	updatedThesis, err := h.thesisService.UpdateThesis(c.Context(), thesis)
 	if err != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": err.Error(),
@@ -198,7 +198,7 @@ func (h *ThesisHandler) UpdateThesis(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{
-		"data":    thesis,
+		"data": updatedThesis,
 	})
 }
 

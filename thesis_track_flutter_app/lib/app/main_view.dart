@@ -61,6 +61,7 @@ class _MainViewState extends State<MainView> {
       RouteLocation.userManagement => 'User Management',
       RouteLocation.myThesis => 'My Thesis',
       RouteLocation.thesis => 'Theses',
+      RouteLocation.topProgress => 'Top Progress',
       RouteLocation.documents => 'Documents',
       _ => route,
     };
@@ -73,6 +74,7 @@ class _MainViewState extends State<MainView> {
       if (userRole == UserRole.admin) RouteLocation.userManagement,
       if (userRole != UserRole.admin) RouteLocation.myThesis,
       if (userRole == UserRole.admin) RouteLocation.thesis,
+      RouteLocation.topProgress,
       if (userRole == UserRole.admin) RouteLocation.documents,
     ];
   }
@@ -97,6 +99,11 @@ class _MainViewState extends State<MainView> {
         ),
         icon: const Icon(Iconsax.document_text),
         selectedIcon: const Icon(Iconsax.document_text),
+      ),
+      const NavigationDrawerDestination(
+        label: Text('Top Progress'),
+        icon: Icon(Iconsax.ranking_1),
+        selectedIcon: Icon(Iconsax.ranking_1),
       ),
       if (userRole == UserRole.admin)
         const NavigationDrawerDestination(

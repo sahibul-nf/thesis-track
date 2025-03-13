@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get_state_manager/src/rx_flutter/rx_obx_widget.dart';
+import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:intl/intl.dart';
 import 'package:readmore/readmore.dart';
@@ -8,7 +9,6 @@ import 'package:thesis_track_flutter_app/app/core/role_guard.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
-import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/controllers/admin_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/controllers/thesis_controller.dart';
 import 'package:thesis_track_flutter_app/app/theme/app_theme.dart';
@@ -205,14 +205,25 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             title: 'Assign Examiner',
                           ),
 
-                        if (RoleGuard.canApproveThesisForDefense(
-                            widget.thesis, AuthController.to.user?.id ?? ''))
+                        if (RoleGuard.canApproveThesisForProposalDefense(
+                                widget.thesis)
+                            .value)
                           CustomMenuItem(
                             onTap: () {
                               MyToast.showComingSoonToast(context);
                             },
                             leading: const Icon(Iconsax.tick_circle, size: 18),
-                            title: 'Approve Thesis',
+                            title: 'Approve Proposal Defense',
+                          ),
+
+                        if (RoleGuard.canApproveThesisForFinalDefense(
+                            widget.thesis))
+                          CustomMenuItem(
+                            onTap: () {
+                              MyToast.showComingSoonToast(context);
+                            },
+                            leading: const Icon(Iconsax.tick_circle, size: 18),
+                            title: 'Approve Final Defense',
                           ),
 
                         if (RoleGuard.canAcceptThesisSubmission(widget.thesis))
@@ -283,13 +294,18 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
     final thesisC = ThesisController.to;
 
     return Obx(() {
-      var canApprove = RoleGuard.canApproveThesisForDefense(
-          thesis, AuthController.to.user?.id ?? '');
+      var canApproveProposalDefense =
+          RoleGuard.canApproveThesisForProposalDefense(thesis).value;
+      var canApproveFinalDefense =
+          RoleGuard.canApproveThesisForFinalDefense(thesis);
       var canAccept = RoleGuard.canAcceptThesisSubmission(thesis);
       var canMarkAsCompleted = RoleGuard.canMarkAsCompleted(thesis);
 
       return Visibility(
-        visible: canApprove || canAccept || canMarkAsCompleted,
+        visible: canApproveProposalDefense ||
+            canApproveFinalDefense ||
+            canAccept ||
+            canMarkAsCompleted,
         child: Padding(
           padding: EdgeInsets.only(top: AppTheme.spaceXL),
           child: Column(
@@ -317,16 +333,17 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
               SizedBox(height: AppTheme.spaceSM),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
+                spacing: AppTheme.spaceSM,
                 children: [
-                  if (canApprove)
-                    FilledButton.icon(
+                  if (canApproveProposalDefense)
+                    FilledButton(
                       onPressed: thesisC.isApprovingForDefense
                           ? null
-                          : () => _approveThesis(),
+                          : () => _approveThesis('proposal defense'),
                       style: FilledButton.styleFrom(
-                        minimumSize: const Size(100, 42),
+                        minimumSize: const Size(100, 44),
                       ),
-                      icon: thesisC.isApprovingForDefense
+                      child: thesisC.isApprovingForDefense
                           ? const SizedBox(
                               width: 20,
                               height: 20,
@@ -335,25 +352,44 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                                 strokeCap: StrokeCap.round,
                               ),
                             )
-                          : const Icon(Iconsax.tick_circle),
-                      label: const Text('Approve Thesis'),
+                          : const Text('Approve Proposal Defense'),
+                    ),
+                  if (canApproveFinalDefense)
+                    FilledButton(
+                      onPressed: thesisC.isApprovingForDefense
+                          ? null
+                          : () => _approveThesis('final defense'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(100, 44),
+                      ),
+                      child: thesisC.isApprovingForDefense
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Approve Final Defense'),
                     ),
                   if (canAccept)
-                    FilledButton.icon(
+                    FilledButton(
                       onPressed: () {
                         _showAcceptThesisDialog();
                       },
                       style: FilledButton.styleFrom(
-                        minimumSize: const Size(100, 42),
+                        minimumSize: const Size(100, 44),
                       ),
-                      icon: const Icon(Iconsax.tick_circle),
-                      label: const Text('Accept Thesis'),
+                      child: const Text('Accept Thesis'),
                     ),
                   if (canMarkAsCompleted)
-                    FilledButton.icon(
+                    FilledButton(
                       onPressed: () {},
-                      icon: const Icon(Iconsax.task_square),
-                      label: const Text('Mark as Completed'),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(100, 44),
+                      ),
+                      child: const Text('Mark as Completed'),
                     ),
                 ],
               ),
@@ -573,43 +609,48 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
 
   Widget _buildTeamWidget(Thesis thesis) {
     final theme = Theme.of(context);
-
-    var userRole = AuthController.to.user?.role;
+    
     var isPending = thesis.status == ThesisStatus.pending;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (userRole != UserRole.admin) ...[
-          Row(
-            children: [
-              sha.AvatarGroup.toLeft(
-                children: [
-                  sha.Avatar(
-                    initials: sha.Avatar.getInitials(thesis.student.name),
-                    size: 24,
-                    backgroundColor: theme.colorScheme.primary,
-                  ),
-                  ...thesis.supervisors.map((supervisor) => sha.Avatar(
-                        initials: sha.Avatar.getInitials(supervisor.user.name),
-                        size: 24,
-                        backgroundColor: theme.colorScheme.secondary,
-                      )),
-                  ...thesis.examiners.map((examiner) => sha.Avatar(
-                        initials: sha.Avatar.getInitials(examiner.user.name),
-                        size: 24,
-                        backgroundColor: theme.colorScheme.primaryContainer,
-                      )),
-                ],
-              ),
-              SizedBox(width: AppTheme.spaceSM),
-              Text(
-                '${thesis.supervisors.length + thesis.examiners.length + 1} Members',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
+        ...[
+          InkWell(
+            onTap: () => _showListOfMembersDialog(),
+            borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                sha.AvatarGroup.toLeft(
+                  children: [
+                    sha.Avatar(
+                      initials: sha.Avatar.getInitials(thesis.student.name),
+                      size: 24,
+                      backgroundColor: theme.colorScheme.primary,
+                    ),
+                    ...thesis.supervisors.map((supervisor) => sha.Avatar(
+                          initials:
+                              sha.Avatar.getInitials(supervisor.user.name),
+                          size: 24,
+                          backgroundColor: theme.colorScheme.secondary,
+                        )),
+                    ...thesis.examiners.map((examiner) => sha.Avatar(
+                          initials: sha.Avatar.getInitials(examiner.user.name),
+                          size: 24,
+                          backgroundColor: theme.colorScheme.primaryContainer,
+                        )),
+                  ],
                 ),
-              ),
-            ],
+                SizedBox(width: AppTheme.spaceSM),
+                Text(
+                  '${thesis.supervisors.length + thesis.examiners.length + 1} Members',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
           ),
           SizedBox(height: AppTheme.spaceLG),
         ],
@@ -914,12 +955,13 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
     );
   }
 
-  Future<void> _approveThesis() async {
+  Future<void> _approveThesis(String type) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Approve Thesis'),
-        content: const Text('Are you sure you want to approve this thesis?'),
+        title: Text('Approve Thesis for $type'),
+        content:
+            Text('Are you sure you want to approve this thesis for $type?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -982,5 +1024,124 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
       await ThesisController.to.markAsCompleted(widget.thesis.id);
       await _loadThesis();
     }
+  }
+
+  /// List of members dialog
+  void _showListOfMembersDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: const BoxConstraints(
+            maxWidth: 400,
+            maxHeight: 500,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppBar(
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
+                ),
+                automaticallyImplyLeading: false,
+                scrolledUnderElevation: 0.0,
+                centerTitle: false,
+                forceMaterialTransparency: true,
+                // toolbarHeight: 60,
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Team Members',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        context.pop();
+                      },
+                      icon: const Icon(Icons.close),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: AppTheme.spaceXS),
+              Expanded(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: widget.thesis.members.lecturers.length +
+                      1, // +1 for student
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return ListTile(
+                        onTap: () {},
+                        visualDensity: VisualDensity.compact,
+                        title: Text(
+                          widget.thesis.members.student.name,
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                        ),
+                        subtitle: Text(
+                          widget.thesis.members.student.role.name,
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          child: Text(
+                            widget.thesis.members.student.name[0],
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                ),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final member = widget.thesis.members.lecturers[index - 1];
+                    return ListTile(
+                      onTap: () {},
+                      visualDensity: VisualDensity.compact,
+                      leading: CircleAvatar(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        child: Text(
+                          member.user.name[0],
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                              ),
+                        ),
+                      ),
+                      title: Text(
+                        member.user.name,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      subtitle: Text(
+                        (member.role == ThesisLectureRole.examiner)
+                            ? member.examinerType?.name ?? ''
+                            : member.role.name,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

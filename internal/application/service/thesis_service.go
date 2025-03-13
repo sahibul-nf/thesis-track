@@ -103,17 +103,36 @@ func (s *thesisService) SubmitProposalThesis(ctx context.Context, req *dto.Thesi
 	return thesis, nil
 }
 
-func (s *thesisService) UpdateThesis(ctx context.Context, thesis *entity.Thesis) error {
+func (s *thesisService) UpdateThesis(ctx context.Context, thesis *entity.Thesis) (*entity.Thesis, error) {
 	// Check if thesis exists
 	existingThesis, err := s.thesisRepo.FindByID(ctx, thesis.ID)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if existingThesis == nil {
-		return errors.New("thesis not found")
+		return nil, errors.New("thesis not found")
 	}
 
-	return s.thesisRepo.Update(ctx, thesis)
+	updatedThesis, err := s.thesisRepo.Update(ctx, thesis)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate thesis progress
+	progresses, err := s.progressRepo.FindAllByThesisID(ctx, thesis.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	thesisProgress, err := s.CalculateThesisProgress(ctx, thesis, progresses)
+	if err != nil {
+		return nil, err
+	}
+
+	// Assign thesis progress to thesis
+	updatedThesis.ThesisProgress = thesisProgress
+
+	return updatedThesis, nil
 }
 
 func (s *thesisService) DeleteThesis(ctx context.Context, id uuid.UUID) error {
@@ -138,19 +157,96 @@ func (s *thesisService) GetThesisByID(ctx context.Context, id uuid.UUID) (*entit
 		return nil, errors.New("thesis not found")
 	}
 
+	// Calculate thesis progress
+	progresses, err := s.progressRepo.FindAllByThesisID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	thesisProgress, err := s.CalculateThesisProgress(ctx, thesis, progresses)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Assign thesis progress to thesis
+	thesis.ThesisProgress = thesisProgress
+
 	return thesis, nil
 }
 
 func (s *thesisService) GetThesesByStudentID(ctx context.Context, studentID uuid.UUID) ([]entity.Thesis, error) {
-	return s.thesisRepo.FindByStudentID(ctx, studentID)
+	theses, err := s.thesisRepo.FindByStudentID(ctx, studentID)
+	if err != nil {
+		return nil, err
+	}	
+
+	// Calculate thesis progress
+	for i := range theses {
+		progresses, err := s.progressRepo.FindAllByThesisID(ctx, theses[i].ID)
+		if err != nil {
+			return nil, err
+		}
+
+		thesisProgress, err := s.CalculateThesisProgress(ctx, &theses[i], progresses)
+		if err != nil {
+			return nil, err
+		}
+
+		// Assign thesis progress to thesis
+		theses[i].ThesisProgress = thesisProgress
+	}
+
+	return theses, nil
 }
 
 func (s *thesisService) GetAllTheses(ctx context.Context) ([]entity.Thesis, error) {
-	return s.thesisRepo.FindAll(ctx)
+	theses, err := s.thesisRepo.FindAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate thesis progress
+	for i := range theses {
+		progresses, err := s.progressRepo.FindAllByThesisID(ctx, theses[i].ID)
+		if err != nil {
+			return nil, err
+		}
+
+		thesisProgress, err := s.CalculateThesisProgress(ctx, &theses[i], progresses)
+		if err != nil {
+			return nil, err
+		}
+
+		// Assign thesis progress to thesis
+		theses[i].ThesisProgress = thesisProgress
+	}
+	
+	return theses, nil
 }
 
 func (s *thesisService) GetThesesByLectureID(ctx context.Context, lectureID uuid.UUID, lectureRole string) ([]entity.Thesis, error) {
-	return s.thesisRepo.FindByLectureID(ctx, lectureID, lectureRole)
+	theses, err := s.thesisRepo.FindByLectureID(ctx, lectureID, lectureRole)
+	if err != nil {
+		return nil, err
+	}
+
+	// Calculate thesis progress
+	for i := range theses {
+		progresses, err := s.progressRepo.FindAllByThesisID(ctx, theses[i].ID)
+		if err != nil {
+			return nil, err
+		}
+
+		thesisProgress, err := s.CalculateThesisProgress(ctx, &theses[i], progresses)
+		if err != nil {
+			return nil, err
+		}
+
+		// Assign thesis progress to thesis
+		theses[i].ThesisProgress = thesisProgress
+	}
+
+	return theses, nil	
 }
 
 func (s *thesisService) UpdateThesisStatus(ctx context.Context, id uuid.UUID, status string) error {
@@ -174,7 +270,7 @@ func (s *thesisService) UpdateThesisStatus(ctx context.Context, id uuid.UUID, st
 	if status == string(entity.ThesisCompleted) && thesis.Status != entity.ThesisCompleted {
 		completedDate := time.Now()
 		thesis.CompletedDate = &completedDate
-		err = s.thesisRepo.Update(ctx, thesis)
+		_, err := s.thesisRepo.Update(ctx, thesis)
 		if err != nil {
 			return err
 		}
@@ -205,8 +301,9 @@ func (s *thesisService) UpdateThesisStatus(ctx context.Context, id uuid.UUID, st
 				log.Printf("Failed to send email to supervisor: %v", err)
 			}
 		}
-	}	
+	}
 
+	// Update thesis status
 	return s.thesisRepo.UpdateStatus(ctx, id, status)
 }
 
@@ -371,7 +468,12 @@ func (s *thesisService) ApproveThesisForDefense(ctx context.Context, thesisID, l
 	}
 
 	// Update thesis
-	return s.thesisRepo.Update(ctx, thesis)
+	_, err = s.thesisRepo.Update(ctx, thesis)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Approve Thesis to be Finalized By Examiner
@@ -425,7 +527,12 @@ func (s *thesisService) ApproveThesisForFinalize(ctx context.Context, thesisID, 
 	}
 
 	// Update thesis
-	return s.thesisRepo.Update(ctx, thesis)
+	_, err = s.thesisRepo.Update(ctx, thesis)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (s *thesisService) checkAllSupervisorsApproved(thesisLectures []entity.ThesisLecture, updatedThesisLecture *entity.ThesisLecture) (bool, bool) {

@@ -1,5 +1,5 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 import 'package:thesis_track_flutter_app/app/bindings/initial_binding.dart';
@@ -11,9 +11,9 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // This is required for the web version of the app to work properly
-  usePathUrlStrategy();
+  if (kIsWeb) usePathUrlStrategy();
   
-  await dotenv.load(fileName: ".env");
+  // await dotenv.load(fileName: ".env");
   await StorageService.init();
 
   // Initialize bindings

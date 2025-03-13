@@ -12,10 +12,23 @@ graph TB
     API --> Auth
     API --> Email
 
-    subgraph Backend Services
+    subgraph Frontend
+        Client
+        subgraph UI Modules
+            AuthModule[Auth Module]
+            ThesisModule[Thesis Module] 
+            ProgressModule[Progress Module]
+            DocumentModule[Document Module]
+        end
+    end
+
+    subgraph Backend
         API
-        DB
-        Storage
-        Auth
-        Email
+        subgraph Core Services
+            AuthService[Auth Service]
+            ThesisService[Thesis Service]
+            ProgressService[Progress Service]
+            DocumentService[Document Service]
+            EmailService[Email Service]
+        end
     end

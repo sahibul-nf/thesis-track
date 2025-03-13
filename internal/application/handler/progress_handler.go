@@ -95,7 +95,7 @@ func (h *ProgressHandler) AddProgress(c *fiber.Ctx) error {
 	// Set Thesis status to "In Progress"
 	if thesis.Status != "In Progress" {
 		thesis.Status = "In Progress"
-		err = h.thesisService.UpdateThesis(c.Context(), thesis)
+		_, err = h.thesisService.UpdateThesis(c.Context(), thesis)
 		if err != nil {
 			return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 				"error": err.Error(),
