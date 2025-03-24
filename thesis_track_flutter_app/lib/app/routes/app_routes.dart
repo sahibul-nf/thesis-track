@@ -9,8 +9,9 @@ import 'package:thesis_track_flutter_app/app/modules/admin/screens/user_manageme
 import 'package:thesis_track_flutter_app/app/modules/auth/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/screens/screens.dart';
+import 'package:thesis_track_flutter_app/app/modules/thesis/screens/browse_thesis_screen.dart';
+import 'package:thesis_track_flutter_app/app/modules/thesis/screens/my_thesis_screen.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/screens.dart';
-import 'package:thesis_track_flutter_app/app/modules/thesis/screens/thesis_screen.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/top_progress_view.dart';
 import 'package:thesis_track_flutter_app/app/widgets/raw_dialog_page.dart';
 
@@ -104,7 +105,7 @@ class AppRoutes {
           GoRoute(
             path: RouteLocation.myThesis,
             name: 'my_thesis',
-            builder: (context, state) => const ThesisScreen(),
+            builder: (context, state) => const MyThesisScreen(),
             routes: [
               GoRoute(
                 parentNavigatorKey: _rootNavigatorKey,
@@ -125,7 +126,7 @@ class AppRoutes {
           GoRoute(
             path: RouteLocation.thesis,
             name: 'browse_theses',
-            builder: (context, state) => const ThesisScreen(),
+            builder: (context, state) => const BrowseThesisScreen(),
           ),
           GoRoute(
             path: RouteLocation.thesisDetail,

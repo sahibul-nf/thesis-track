@@ -102,18 +102,25 @@ class RoleGuard {
     return role != null;
   }
 
-  static bool canAssignSupervisor(ThesisStatus status) {
+  static bool canAssignSupervisor(Thesis thesis) {
     final user = getCurrentUser();
-    final role = user?.role;
-
     if (user == null) return false;
 
-    return role == UserRole.admin;
+    final role = user.role;
+    if (role != UserRole.admin) return false;
+
+    // Thesis must be in progress
+    if (thesis.status != ThesisStatus.inProgress) return false;
+
+    // Maximum 2 supervisors
+    if (thesis.supervisors.length >= 2) return false;
+
+    return true;
   }
 
   /// Assign Examiner Guard
   /// Only admin can assign examiners
-  static bool canAssignExaminer(Thesis thesis) {
+  static bool canAssignProposalDefenseExaminer(Thesis thesis) {
     final user = getCurrentUser();
     final role = user?.role;
 
@@ -122,6 +129,16 @@ class RoleGuard {
 
     // Thesis must be in progress
     if (thesis.status != ThesisStatus.inProgress) return false;
+
+    // Maximum 2 examiners with role proposal defense
+    var allProposalDefenseExaminers = thesis.examiners
+        .where((e) =>
+            e.examinerType == ThesisLectureExaminerType.proposalDefenseExaminer)
+        .toList();
+    if (allProposalDefenseExaminers.length >= 2) return false;
+
+    // Thesis must be proposal ready
+    if (!thesis.isProposalReady) return false;
 
     // // Supervisor must be approved proposal defense
     // if (thesis.supervisors.any((e) => e.user.id == user.id && e.role == ThesisLectureRole.supervisor && e.proposalDefenseApprovedAt == null)) return false;
@@ -145,19 +162,18 @@ class RoleGuard {
     if (role != UserRole.lecturer) return RxBool(false);
 
     // Thesis must be in progress
-    // if (thesis.status != ThesisStatus.inProgress) return false;
+    if (thesis.status != ThesisStatus.inProgress) return RxBool(false);
 
     // Lecturer must be a supervisor or examiner
     var isSupervisor = thesis.supervisors.any((e) => e.user.id == lectureId);
-    var isExaminer = thesis.examiners.any((e) => e.user.id == lectureId);
-    if (!isSupervisor && !isExaminer) return RxBool(false);
+    if (!isSupervisor) return RxBool(false);
 
     // Supervisor or examiner must have at least progress session reviewed
     var progressSessions = thesis.progresses;
     if (progressSessions.isEmpty) return RxBool(false);
 
-    // Check if the progress session is reviewed
-    var isReviewed = progressSessions.any((e) =>
+    // All progress sessions must be reviewed
+    var isReviewed = progressSessions.every((e) =>
         e.status.value.toLowerCase() == 'reviewed' &&
         e.reviewerId == lectureId);
     if (!isReviewed) return RxBool(false);
@@ -183,12 +199,11 @@ class RoleGuard {
     if (role != UserRole.lecturer) return false;
 
     // Thesis must be in progress
-    // if (thesis.status != ThesisStatus.inProgress) return false;
+    if (thesis.status != ThesisStatus.inProgress) return false;
 
     // Lecturer must be a supervisor or examiner
     var isSupervisor = thesis.supervisors.any((e) => e.user.id == lectureId);
-    var isExaminer = thesis.examiners.any((e) => e.user.id == lectureId);
-    if (!isSupervisor && !isExaminer) return false;
+    if (!isSupervisor) return false;
 
     // Supervisor or examiner must have at least progress session reviewed
     var progressSessions = thesis.progresses;
@@ -202,6 +217,11 @@ class RoleGuard {
 
     // Thesis must be have ready Proposal Defense
     if (!thesis.isProposalReady) return false;
+
+    // Only can approve if have ready propoxsal defense examiner (just indicate that there have proposal defense examiner assigned) (on research phase)
+    var isReadyProposalDefenseExaminer = thesis.examiners.any((e) =>
+        e.examinerType == ThesisLectureExaminerType.proposalDefenseExaminer);
+    if (!isReadyProposalDefenseExaminer) return false;
 
     // Check if the lecturer has approved the thesis for final defense
     var isApprovedForFinalDefense = thesis.supervisors

@@ -21,6 +21,8 @@ class CustomMenuItem extends StatelessWidget {
       title: Text(
         title,
         style: const TextStyle(fontSize: 12),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 10,

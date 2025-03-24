@@ -324,7 +324,7 @@ class RegisterScreen extends GetView<AuthController> {
                           icon: Icon(Iconsax.user),
                         ),
                         ButtonSegment(
-                          value: 'lecturer',
+                          value: 'lecture',
                           label: Text('Lecturer'),
                           icon: Icon(Iconsax.teacher),
                         ),
@@ -413,7 +413,7 @@ class RegisterScreen extends GetView<AuthController> {
       password: _passwordController.text,
       name: _nameController.text,
       role: _selectedRole.value,
-      nidn: _selectedRole.value == 'lecturer' ? _nidnController.text : null,
+      nidn: _selectedRole.value == 'lecture' ? _nidnController.text : null,
       department: _departmentController.text,
       nim: _selectedRole.value == 'student' ? _nimController.text : null,
       year: _selectedRole.value == 'student' ? _yearController.text : null,

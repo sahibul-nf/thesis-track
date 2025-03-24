@@ -9,6 +9,7 @@ import 'package:thesis_track_flutter_app/app/modules/thesis/controllers/thesis_c
 import 'package:thesis_track_flutter_app/app/routes/app_routes.dart';
 import 'package:thesis_track_flutter_app/app/theme/app_theme.dart';
 import 'package:thesis_track_flutter_app/app/widgets/card.dart';
+import 'package:thesis_track_flutter_app/app/widgets/empty_state.dart';
 
 import '../widgets/metric_card.dart';
 
@@ -341,6 +342,18 @@ class HomeLecturerView extends StatelessWidget {
                   SizedBox(height: AppTheme.spaceMD),
 
                   // Recent Theses List
+                  if (theses.isEmpty)
+                    EmptyStateWidget(
+                      title: 'No recent supervisions',
+                      message:
+                          "All clear for now. We'll notify you as soon as a new supervision is scheduled.",
+                      icon: Iconsax.document_text,
+                      onAction: () => thesisController.onRefresh(),
+                      buttonSize: Size(120, AppTheme.buttonSmall),
+                      actionLabel: 'Refresh',
+                      actionIcon: Iconsax.refresh,
+                    )
+                  else
                   ListView.separated(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),

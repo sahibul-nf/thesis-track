@@ -3,9 +3,9 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
-import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/controllers/progress_controller.dart';
 import 'package:thesis_track_flutter_app/app/theme/app_theme.dart';
+import 'package:thesis_track_flutter_app/app/widgets/card.dart';
 import 'package:thesis_track_flutter_app/app/widgets/text_field.dart';
 import 'package:thesis_track_flutter_app/app/widgets/toast.dart';
 
@@ -26,7 +26,7 @@ class _ProgressCreateScreenState extends State<ProgressCreateScreen> {
   final _progressDescriptionController = TextEditingController();
   final _documentUrlController = TextEditingController();
   final _progressController = Get.find<ProgressController>();
-  User? _selectedReviewer;
+  ThesisLecture? _selectedReviewer;
 
   @override
   void initState() {
@@ -46,7 +46,7 @@ class _ProgressCreateScreenState extends State<ProgressCreateScreen> {
 
     final err = await _progressController.addProgress(
       thesis: widget.thesis,
-      reviewerId: _selectedReviewer!.id,
+      reviewerId: _selectedReviewer!.user.id,
       documentUrl: _documentUrlController.text,
       progressDescription: _progressDescriptionController.text,
     );
@@ -146,7 +146,7 @@ class _ProgressCreateScreenState extends State<ProgressCreateScreen> {
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         SizedBox(height: AppTheme.spaceSM),
-                        DropdownButtonFormField<User>(
+                        DropdownButtonFormField<ThesisLecture>(
                           style: Theme.of(context)
                               .textTheme
                               .bodyMedium!
@@ -157,14 +157,31 @@ class _ProgressCreateScreenState extends State<ProgressCreateScreen> {
                           decoration: const InputDecoration(
                             hintText: 'Choose a reviewer',
                           ),
-                          items: widget.thesis.lecturers
-                              .map(
-                                (lecturer) => DropdownMenuItem(
-                                  value: lecturer,
-                                  child: Text(lecturer.name),
-                                ),
-                              )
-                              .toList(),
+                          items: widget.thesis.lecturers.map((lecturer) {
+                            var role = lecturer.role.name;
+                            if (lecturer.examinerType != null) {
+                              role = lecturer.examinerType!.name;
+                            }
+
+                            return DropdownMenuItem(
+                              value: lecturer,
+                              child: Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                spacing: 8,
+                                children: [
+                                  Text(
+                                    lecturer.user.name,
+                                  ),
+                                  ThesisStatusChip(
+                                    status: role,
+                                    backgroundColor:
+                                        theme.colorScheme.secondary,
+                                  )
+                                ],
+                              ),
+                            );
+                          }).toList(),
                           onChanged: (value) {
                             setState(() {
                               _selectedReviewer = value;

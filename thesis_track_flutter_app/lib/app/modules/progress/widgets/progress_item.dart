@@ -406,7 +406,8 @@ class _ProgressItemState extends State<ProgressItem> {
                     autovalidateMode: AutovalidateMode.onUserInteraction,
                     decoration: InputDecoration(
                       hintText: () {
-                        if (progress.status.toLowerCase() != 'reviewed') {
+                        if (progress.status.toLowerCase() != 'reviewed' &&
+                            RoleGuard.canReviewProgress(progress)) {
                           return 'Share your thoughts and suggestions...';
                         }
                         return 'Add your comment here...';
