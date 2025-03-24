@@ -358,9 +358,9 @@ func (s *thesisService) assignLectureToThesis(ctx context.Context, thesisID, lec
 			return nil, errors.New("thesis status must be Proposal Ready before assigning proposal defense examiner")
 		}
 
-		if !thesis.IsFinalExamReady {
-			return nil, errors.New("thesis status must be Final Exam Ready before assigning final defense examiner")
-		}
+		// if !thesis.IsFinalExamReady {
+		// 	return nil, errors.New("thesis status must be Final Exam Ready before assigning final defense examiner")
+		// }
 
 		// Check if thesis is ready for final defense
 		if thesis.IsFinalExamReady {
