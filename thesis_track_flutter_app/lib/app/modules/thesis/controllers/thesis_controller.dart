@@ -135,6 +135,7 @@ class ThesisController extends GetxController {
   final _topProgressTheses = <Thesis>[].obs;
   final _selectedYear = ''.obs;
   final _searchQuery = ''.obs;
+  final selectedStatus = Rxn<ThesisStatus>();
 
   List<Thesis> get allTheses => _allTheses.value;
   List<Thesis> get myTheses => _myTheses.value;
@@ -154,13 +155,25 @@ class ThesisController extends GetxController {
   String get searchQuery => _searchQuery.value;
 
   List<Thesis> get filteredTheses {
-    if (_searchQuery.value.isEmpty) return _allTheses.value;
+    var filtered = _allTheses.value;
+    
+    // Apply search filter
+    if (_searchQuery.value.isNotEmpty) {
+      filtered = filtered.where((thesis) {
+        return thesis.title
+            .toLowerCase()
+            .contains(_searchQuery.value.toLowerCase());
+      }).toList();
+    }
 
-    return _allTheses.value.where((thesis) {
-      return thesis.title
-          .toLowerCase()
-          .contains(_searchQuery.value.toLowerCase());
-    }).toList();
+    // Apply status filter
+    if (selectedStatus.value != null) {
+      filtered = filtered.where((thesis) {
+        return thesis.status == selectedStatus.value;
+      }).toList();
+    }
+
+    return filtered;
   }
 
   @override
@@ -421,5 +434,9 @@ class ThesisController extends GetxController {
 
   void updateSearch(String query) {
     _searchQuery.value = query;
+  }
+
+  void updateStatusFilter(ThesisStatus? status) {
+    selectedStatus.value = status;
   }
 }

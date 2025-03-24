@@ -191,7 +191,7 @@ class HomeStudentView extends StatelessWidget {
                       ),
                       TextButton.icon(
                         onPressed: () => context.go(
-                          RouteLocation.toProgressList(thesis!.id),
+                          RouteLocation.toThesisDetail(thesis!.id),
                           extra: thesis,
                         ),
                         icon: const Icon(
