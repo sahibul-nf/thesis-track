@@ -25,7 +25,7 @@ class HomeStudentView extends StatelessWidget {
 
     return Obx(() {
       final theses = thesisController.myTheses;
-      if (theses.isEmpty && !thesisController.isLoading) {
+      if (theses.isEmpty && !thesisController.isLoadingMyThesis) {
         return SizedBox(
           height: MediaQuery.sizeOf(context).height * 0.8,
           width: MediaQuery.sizeOf(context).width,
@@ -236,7 +236,7 @@ class HomeStudentView extends StatelessWidget {
             ),
           ],
         ).asSkeleton(
-          enabled: thesisController.isLoading,
+          enabled: thesisController.isLoadingMyThesis,
         ),
       );
     });

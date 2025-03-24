@@ -83,7 +83,7 @@ class _ThesisDetailScreenState extends State<ThesisDetailScreen> {
             Expanded(
               child: Center(
                 child: EmptyStateWidget(
-                  isLoading: ThesisController.to.isLoading,
+                  isLoading: ThesisController.to.isLoadingMyThesis,
                   icon: Iconsax.clipboard_text,
                   title: 'Thesis Proposal Review',
                   message:

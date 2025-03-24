@@ -56,7 +56,7 @@ class Thesis {
   final User student;
   final User mainSupervisor;
   final List<ThesisLecture> supervisors;
-  final List<ThesisLecture> examiners;
+  final RxList<ThesisLecture> examiners;
   final ThesisProgress? thesisProgress;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -88,17 +88,19 @@ class Thesis {
   var progresses = RxList<ProgressModel>([]);
 
   /// List of members (supervisors, examiners, student)
-  ({int total, User student, List<ThesisLecture> lecturers}) get members {
-    return (
-      total: [...supervisors, ...examiners].length + 1,
-      student: student,
-      lecturers: [...supervisors, ...examiners],
+  Rx<({int total, User student, List<ThesisLecture> lecturers})> get members {
+    return Rx<({int total, User student, List<ThesisLecture> lecturers})>(
+      (
+        total: [...supervisors, ...examiners].length + 1,
+        student: student,
+        lecturers: [...supervisors, ...examiners],
+      ),
     );
   }
 
   /// Get all lecturers
-  List<User> get lecturers {
-    return [...supervisors.map((e) => e.user), ...examiners.map((e) => e.user)];
+  RxList<ThesisLecture> get lecturers {
+    return RxList<ThesisLecture>([...supervisors, ...examiners]);
   }
 
   factory Thesis.fromJson(Map<String, dynamic> json) {
@@ -169,7 +171,7 @@ class Thesis {
       isFinalExamReady: json['is_final_exam_ready'] as bool,
       student: User.fromJson(json['student'] as Map<String, dynamic>),
       supervisors: supervisors,
-      examiners: examiners,
+      examiners: RxList.from(examiners),
       mainSupervisor:
           User.fromJson(json['main_supervisor'] as Map<String, dynamic>),
       thesisProgress: json['thesis_progress'] != null
@@ -223,7 +225,7 @@ class Thesis {
     User? student,
     User? mainSupervisor,
     List<ThesisLecture>? supervisors,
-    List<ThesisLecture>? examiners,
+    RxList<ThesisLecture>? examiners,
     ThesisProgress? thesisProgress,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -245,7 +247,7 @@ class Thesis {
       student: student ?? this.student,
       mainSupervisor: mainSupervisor ?? this.mainSupervisor,
       supervisors: supervisors ?? this.supervisors,
-      examiners: examiners ?? this.examiners,
+      examiners: RxList.from(examiners ?? this.examiners),
       thesisProgress: thesisProgress ?? this.thesisProgress,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

@@ -118,7 +118,6 @@ class ProgressController extends GetxController {
   }) async {
     try {
       _isLoading.value = true;
-      _error.value = null;
 
       final result = await _progressRepository.addProgress(
         thesisId: thesis.id,
@@ -128,7 +127,6 @@ class ProgressController extends GetxController {
       );
       return result.fold(
         (failure) {
-          _error.value = failure.message;
           return failure.message;
         },
         (progress) {

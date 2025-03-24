@@ -54,13 +54,27 @@ class _MainViewState extends State<MainView> {
     });
   }
 
+  String _getThesisScreenTitle(UserRole role) {
+    switch (role) {
+      case UserRole.student:
+        return 'Find Research Topics';
+      case UserRole.lecturer:
+        return 'Browse Student Theses';
+      case UserRole.admin:
+        return 'Manage Thesis Database';
+      default:
+        return 'Browse Theses';
+    }
+  }
+
   String _getFormattedPageTitle(String route) {
     // Convert route path to readable title
     return switch (route) {
       RouteLocation.home => 'Home',
       RouteLocation.userManagement => 'User Management',
       RouteLocation.myThesis => 'My Thesis',
-      RouteLocation.thesis => 'Theses',
+      RouteLocation.thesis =>
+        _getThesisScreenTitle(AuthController.to.user?.role ?? UserRole.student),
       RouteLocation.topProgress => 'Top Progress',
       RouteLocation.documents => 'Documents',
       _ => route,
@@ -73,7 +87,7 @@ class _MainViewState extends State<MainView> {
       RouteLocation.home,
       if (userRole == UserRole.admin) RouteLocation.userManagement,
       if (userRole != UserRole.admin) RouteLocation.myThesis,
-      if (userRole == UserRole.admin) RouteLocation.thesis,
+      RouteLocation.thesis,
       RouteLocation.topProgress,
       if (userRole == UserRole.admin) RouteLocation.documents,
     ];
@@ -93,12 +107,18 @@ class _MainViewState extends State<MainView> {
           icon: Icon(Iconsax.user),
           selectedIcon: Icon(Iconsax.user),
         ),
-      NavigationDrawerDestination(
+      if (userRole != UserRole.admin)
+        const NavigationDrawerDestination(
         label: Text(
-          userRole != UserRole.student ? 'Theses' : 'My Thesis',
+          'My Thesis'
         ),
-        icon: const Icon(Iconsax.document_text),
-        selectedIcon: const Icon(Iconsax.document_text),
+          icon: Icon(Iconsax.document_text),
+          selectedIcon: Icon(Iconsax.document_text),
+        ),
+      const NavigationDrawerDestination(
+        label: Text('Theses'),
+        icon: Icon(Iconsax.document_text_1),
+        selectedIcon: Icon(Iconsax.document_text_1),
       ),
       const NavigationDrawerDestination(
         label: Text('Top Progress'),

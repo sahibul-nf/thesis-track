@@ -51,7 +51,16 @@ final mockOtherTheses = [
         role: ThesisLectureRole.supervisor,
       ),
     ],
-    examiners: [],
+    examiners: RxList<ThesisLecture>([]),
+    thesisProgress: ThesisProgress(
+      totalProgress: 20,
+      details: ProgressDetails(
+        initialPhase: 10,
+        proposalPhase: 10,
+        researchPhase: 10,
+        finalPhase: 10,
+      ),
+    ),
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   ),
@@ -85,7 +94,16 @@ final mockOtherTheses = [
       updatedAt: DateTime.now(),
     ),
     supervisors: [],
-    examiners: [],
+    examiners: RxList<ThesisLecture>([]),
+    thesisProgress: ThesisProgress(
+      totalProgress: 70,
+      details: ProgressDetails(
+        initialPhase: 20,
+        proposalPhase: 20,
+        researchPhase: 20,
+        finalPhase: 20,
+      ),
+    ),
     createdAt: DateTime.now(),
     updatedAt: DateTime.now(),
   ),
@@ -107,53 +125,78 @@ class ThesisController extends GetxController {
 
   final _allTheses = Rx<List<Thesis>>([]);
   final _myTheses = Rx<List<Thesis>>([]);
-  final _isLoading = false.obs;
+  final _isLoadingMyThesis = false.obs;
+  final _isLoadingAllTheses = false.obs;
   final _error = Rxn<String>();
   final _otherTheses = <Thesis>[].obs;
   final _isCreating = false.obs;
   final _isApprovingForDefense = false.obs;
+  final _isAssigningExaminer = false.obs;
   final _topProgressTheses = <Thesis>[].obs;
   final _selectedYear = ''.obs;
-  final _isLoadingTopProgress = false.obs;
+  final _searchQuery = ''.obs;
 
   List<Thesis> get allTheses => _allTheses.value;
   List<Thesis> get myTheses => _myTheses.value;
-  bool get isLoading => _isLoading.value;
-  bool get isLoadingTopProgress => _isLoadingTopProgress.value;
+  bool get isLoadingMyThesis => _isLoadingMyThesis.value;
+  bool get isLoadingAllTheses => _isLoadingAllTheses.value;
   String? get error => _error.value;
   List<Thesis> get otherTheses => _otherTheses;
   bool get isCreating => _isCreating.value;
   bool get isApprovingForDefense => _isApprovingForDefense.value;
+  bool get isAssigningExaminer => _isAssigningExaminer.value;
   String get selectedYear => _selectedYear.value;
   List<Thesis> get topProgressTheses => _topProgressTheses;
   int get topProgressThesesCount => _topProgressTheses.length;
   int get myTopProgressPosition => _topProgressTheses.indexWhere(
         (thesis) => thesis.id == _myTheses.value.first.id,
       );
+  String get searchQuery => _searchQuery.value;
+
+  List<Thesis> get filteredTheses {
+    if (_searchQuery.value.isEmpty) return _allTheses.value;
+
+    return _allTheses.value.where((thesis) {
+      return thesis.title
+          .toLowerCase()
+          .contains(_searchQuery.value.toLowerCase());
+    }).toList();
+  }
 
   @override
   void onInit() {
     super.onInit();
     getMyTheses();
-    getAllTheses().then((_) => getTopProgressTheses());
+    getAllTheses();
+  }
+
+  Future<void> onRefresh() async {
+    await getMyTheses();
+    getAllTheses();
   }
 
   Future<void> getAllTheses() async {
-    final result = await _thesisRepository.getAllTheses();
-    result.fold(
-      (failure) => _allTheses.value = [],
-      (theses) {
-        _allTheses.value = theses;
-        for (var thesis in theses) {
-          _progressController.getProgressesByThesis(thesis);
-        }
-      },
-    );
+    try {
+      _isLoadingAllTheses.value = true;
+      final result = await _thesisRepository.getAllTheses();
+      result.fold(
+        (failure) => _allTheses.value = [],
+        (theses) {
+          _allTheses.value = theses;
+          getTopProgressTheses();
+          for (var thesis in theses) {
+            _progressController.getProgressesByThesis(thesis);
+          }
+        },
+      );
+    } finally {
+      _isLoadingAllTheses.value = false;
+    }
   }
 
   Future<String?> getMyTheses() async {
     try {
-      _isLoading.value = true;
+      _isLoadingMyThesis.value = true;
       final result = await _thesisRepository.getMyTheses();
       return result.fold(
         (failure) {
@@ -173,13 +216,13 @@ class ThesisController extends GetxController {
         },
       );
     } finally {
-      _isLoading.value = false;
+      _isLoadingMyThesis.value = false;
     }
   }
 
   Future<String?> getThesisById(String id) async {
     try {
-      _isLoading.value = true;
+      _isLoadingMyThesis.value = true;
       final result = await _thesisRepository.getThesisById(id);
       return result.fold(
         (failure) {
@@ -200,7 +243,7 @@ class ThesisController extends GetxController {
         },
       );
     } finally {
-      _isLoading.value = false;
+      _isLoadingMyThesis.value = false;
     }
   }
 
@@ -235,7 +278,7 @@ class ThesisController extends GetxController {
   /// Accept Thesis Submission & Assign Supervisor By Admin
   Future<String?> acceptThesis(String thesisId, String lectureId) async {
     try {
-      _isLoading.value = true;
+      _isLoadingMyThesis.value = true;
       final result =
           await _thesisRepository.assignSupervisor(thesisId, lectureId);
       return result.fold(
@@ -249,13 +292,13 @@ class ThesisController extends GetxController {
         },
       );
     } finally {
-      _isLoading.value = false;
+      _isLoadingMyThesis.value = false;
     }
   }
 
   Future<String?> assignSupervisor(String thesisId, String lectureId) async {
     try {
-      _isLoading.value = true;
+      _isLoadingMyThesis.value = true;
       final result =
           await _thesisRepository.assignSupervisor(thesisId, lectureId);
       return result.fold(
@@ -266,24 +309,32 @@ class ThesisController extends GetxController {
         (_) => null,
       );
     } finally {
-      _isLoading.value = false;
+      _isLoadingMyThesis.value = false;
     }
   }
 
-  Future<String?> assignExaminer(String thesisId, String lectureId) async {
+  Future<String?> assignExaminer(
+    Thesis thesis,
+    ThesisLecture thesisLecture,
+  ) async {
     try {
-      _isLoading.value = true;
-      final result =
-          await _thesisRepository.assignExaminer(thesisId, lectureId);
+      _isAssigningExaminer.value = true;
+      final result = await _thesisRepository.assignExaminer(
+        thesis.id,
+        thesisLecture.user.id,
+      );
       return result.fold(
         (failure) {
-          _error.value = failure.message;
           return failure.message;
         },
-        (_) => null,
+        (_) async {
+          // add the thesis lecture to the thesis
+          thesis.examiners.add(thesisLecture);
+          return null;
+        },
       );
     } finally {
-      _isLoading.value = false;
+      _isAssigningExaminer.value = false;
     }
   }
 
@@ -308,7 +359,7 @@ class ThesisController extends GetxController {
 
   Future<String?> markAsCompleted(String thesisId) async {
     try {
-      _isLoading.value = true;
+      _isLoadingMyThesis.value = true;
       final result = await _thesisRepository.markAsCompleted(thesisId);
       return result.fold(
         (failure) {
@@ -321,7 +372,7 @@ class ThesisController extends GetxController {
         },
       );
     } finally {
-      _isLoading.value = false;
+      _isLoadingMyThesis.value = false;
     }
   }
 
@@ -335,41 +386,40 @@ class ThesisController extends GetxController {
 
   // Get top progress theses filtered by year
   Future<void> getTopProgressTheses([String? year]) async {
-    try {
-      _isLoadingTopProgress.value = true;
-      if (year != null) _selectedYear.value = year;
+    if (year != null) _selectedYear.value = year;
 
-      // Get date 6 months ago
-      final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+    // Get date 6 months ago
+    final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
 
-      // Filter theses from last 6 months
-      var filteredTheses = allTheses.where((thesis) {
-        // Check if thesis is active in last 6 months
-        final isActive = thesis.updatedAt.isAfter(sixMonthsAgo);
+    // Filter theses from last 6 months
+    var filteredTheses = allTheses.where((thesis) {
+      // Check if thesis is active in last 6 months
+      final isActive = thesis.updatedAt.isAfter(sixMonthsAgo);
 
-        // Apply year filter if selected
-        final matchesYear =
-            selectedYear.isEmpty || thesis.student.year == selectedYear;
+      // Apply year filter if selected
+      final matchesYear =
+          selectedYear.isEmpty || thesis.student.year == selectedYear;
 
-        return isActive && matchesYear;
-      }).toList();
+      return isActive && matchesYear;
+    }).toList();
 
-      // Sort by progress percentage
-      filteredTheses.sort((a, b) {
-        final aProgress = a.thesisProgress?.totalProgress ?? 0;
-        final bProgress = b.thesisProgress?.totalProgress ?? 0;
+    // Sort by progress percentage
+    filteredTheses.sort((a, b) {
+      final aProgress = a.thesisProgress?.totalProgress ?? 0;
+      final bProgress = b.thesisProgress?.totalProgress ?? 0;
 
-        // If progress is equal, sort by last update (most recent first)
-        if (aProgress == bProgress) {
-          return b.updatedAt.compareTo(a.updatedAt);
-        }
+      // If progress is equal, sort by last update (most recent first)
+      if (aProgress == bProgress) {
+        return b.updatedAt.compareTo(a.updatedAt);
+      }
 
-        return bProgress.compareTo(aProgress);
-      });
+      return bProgress.compareTo(aProgress);
+    });
 
-      _topProgressTheses.value = filteredTheses;
-    } finally {
-      _isLoadingTopProgress.value = false;
-    }
+    _topProgressTheses.value = filteredTheses;
+  }
+
+  void updateSearch(String query) {
+    _searchQuery.value = query;
   }
 }

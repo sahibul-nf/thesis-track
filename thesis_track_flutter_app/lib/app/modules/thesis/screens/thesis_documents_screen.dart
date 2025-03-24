@@ -51,7 +51,7 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
       body: LoadingOverlay(
         isLoading: _isLoading,
         child: Obx(() {
-          if (_thesisController.isLoading) {
+          if (_thesisController.isLoadingMyThesis) {
             return const LoadingWidget();
           }
 

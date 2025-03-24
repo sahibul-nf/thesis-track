@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import 'package:readmore/readmore.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as sha;
 import 'package:thesis_track_flutter_app/app/core/role_guard.dart';
+import 'package:thesis_track_flutter_app/app/core/utils.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
@@ -120,7 +121,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
               IconButton(
                 onPressed: _loadThesis,
                 tooltip: 'Refresh',
-                icon: ThesisController.to.isLoading
+                icon: ThesisController.to.isLoadingMyThesis
                     ? const SizedBox(
                         width: 20,
                         height: 20,
@@ -160,8 +161,11 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                   );
                 },
                 menuChildren: [
-                  SizedBox(
-                    width: 200,
+                  Container(
+                    constraints: const BoxConstraints(
+                      maxWidth: 240,
+                      minWidth: 200,
+                    ),
                     child: Column(
                       children: [
                         // Refresh Thesis
@@ -179,7 +183,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             leading: const Icon(Iconsax.edit, size: 18),
                             title: 'Edit',
                           ),
-                        if (RoleGuard.canAssignSupervisor(widget.thesis.status))
+                        if (RoleGuard.canAssignSupervisor(widget.thesis))
                           CustomMenuItem(
                             onTap: () {
                               _showAssignLecturerDialog(
@@ -192,13 +196,17 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             title: 'Assign Supervisor',
                           ),
 
-                        if (RoleGuard.canAssignExaminer(widget.thesis))
+                        if (RoleGuard.canAssignProposalDefenseExaminer(
+                            widget.thesis))
                           CustomMenuItem(
                             onTap: () {
                               _showAssignLecturerDialog(
-                                title: 'Examiner',
-                                role: 'examiner',
-                                onAssign: _assignExaminer,
+                                title: 'Proposal Defense Examiner',
+                                role: 'proposal defense examiner',
+                                onAssign: (lecturer) => _assignExaminer(
+                                    lecturer,
+                                    ThesisLectureExaminerType
+                                        .proposalDefenseExaminer),
                               );
                             },
                             leading: const Icon(Iconsax.verify, size: 18),
@@ -230,7 +238,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                           CustomMenuItem(
                             onTap: _showAcceptThesisDialog,
                             leading: const Icon(Iconsax.tick_circle, size: 18),
-                            title: 'Accept Thesis',
+                            title: 'Accept Submission',
                           ),
 
                         if (RoleGuard.canMarkAsCompleted(widget.thesis))
@@ -298,6 +306,8 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
           RoleGuard.canApproveThesisForProposalDefense(thesis).value;
       var canApproveFinalDefense =
           RoleGuard.canApproveThesisForFinalDefense(thesis);
+      final canAssignProposalDefenseExaminer =
+          RoleGuard.canAssignProposalDefenseExaminer(thesis);
       var canAccept = RoleGuard.canAcceptThesisSubmission(thesis);
       var canMarkAsCompleted = RoleGuard.canMarkAsCompleted(thesis);
 
@@ -305,7 +315,8 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
         visible: canApproveProposalDefense ||
             canApproveFinalDefense ||
             canAccept ||
-            canMarkAsCompleted,
+            canMarkAsCompleted ||
+            canAssignProposalDefenseExaminer,
         child: Padding(
           padding: EdgeInsets.only(top: AppTheme.spaceXL),
           child: Column(
@@ -335,6 +346,32 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 spacing: AppTheme.spaceSM,
                 children: [
+                  if (canAssignProposalDefenseExaminer)
+                    FilledButton(
+                      onPressed: () {
+                        _showAssignLecturerDialog(
+                          title: 'Examiner',
+                          role: 'Proposal Defense examiner',
+                          onAssign: (lecturer) => _assignExaminer(
+                              lecturer,
+                              ThesisLectureExaminerType
+                                  .proposalDefenseExaminer),
+                        );
+                      },
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(100, 44),
+                      ),
+                      child: thesisC.isAssigningExaminer
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Assign Examiner'),
+                    ),
                   if (canApproveProposalDefense)
                     FilledButton(
                       onPressed: thesisC.isApprovingForDefense
@@ -381,7 +418,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(100, 44),
                       ),
-                      child: const Text('Accept Thesis'),
+                      child: const Text('Accept Submission'),
                     ),
                   if (canMarkAsCompleted)
                     FilledButton(
@@ -401,7 +438,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
   }
 
   Widget _buildResearchFieldIcon(String researchField) {
-    final (icon, color) = _getResearchFieldIconAndColor(researchField);
+    final (icon, color) = Utils.getResearchFieldIconAndColor(researchField);
 
     return Container(
       width: 90,
@@ -422,8 +459,8 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Accept Thesis'),
-        content: const Text('Are you sure you want to accept this thesis?'),
+        title: const Text('Accept Submission'),
+        content: const Text('Are you sure you want to accept this submission?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -483,133 +520,9 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
     );
   }
 
-  (IconData, Color) _getResearchFieldIconAndColor(String researchField) {
-    // Lowercase dan hapus spasi untuk memudahkan matching
-    final field = researchField.toLowerCase().replaceAll(' ', '');
-
-    switch (field) {
-      // Computer Science / IT
-      case 'artificialintelligence':
-      case 'machinelearning':
-        return (Iconsax.component, const Color(0xFF7B61FF)); // Purple
-      case 'computernetworks':
-      case 'networking':
-        return (Iconsax.global, const Color(0xFF2196F3)); // Blue
-      case 'cybersecurity':
-      case 'security':
-        return (Iconsax.shield_tick, const Color(0xFF4CAF50)); // Green
-      case 'datascience':
-      case 'bigdata':
-        return (Iconsax.data, const Color(0xFF00BCD4)); // Cyan
-      case 'mobiledevelopment':
-      case 'mobilecomputing':
-        return (Iconsax.mobile, const Color(0xFF3F51B5)); // Indigo
-      case 'webdevelopment':
-        return (Iconsax.code, const Color(0xFF009688)); // Teal
-      case 'cloudcomputing':
-        return (Iconsax.cloud, const Color(0xFF03A9F4)); // Light Blue
-      case 'iot':
-      case 'internetofthings':
-        return (Iconsax.wifi, const Color(0xFF00BFA5)); // Teal Accent
-      case 'blockchain':
-        return (Iconsax.text_block, const Color(0xFF607D8B)); // Blue Grey
-      case 'gamedev':
-      case 'gamedevelopment':
-        return (Iconsax.game, const Color(0xFFE91E63)); // Pink
-
-      // Information Systems
-      case 'informationsystems':
-      case 'mis':
-        return (Iconsax.diagram, const Color(0xFF9C27B0)); // Purple
-      case 'businessintelligence':
-        return (Iconsax.chart_2, const Color(0xFF673AB7)); // Deep Purple
-      case 'erp':
-      case 'enterpriseresourceplanning':
-        return (Iconsax.building_4, const Color(0xFF3949AB)); // Indigo
-
-      // Software Engineering
-      case 'softwareengineering':
-      case 'softwaredevelopment':
-        return (Iconsax.code_1, const Color(0xFF1E88E5)); // Blue
-      case 'systemdesign':
-        return (Iconsax.hierarchy_square_2, const Color(0xFF00897B)); // Teal
-      case 'testing':
-      case 'qualityassurance':
-        return (Iconsax.tick_square, const Color(0xFF43A047)); // Green
-
-      // Default colors based on first letter for variety
-      default:
-        final firstChar = field.isEmpty ? 'a' : field[0];
-        IconData icon;
-        Color color;
-
-        switch (firstChar) {
-          case 'a':
-          case 'b':
-            icon = Iconsax.document_text;
-            color = const Color(0xFFF44336); // Red
-            break;
-          case 'c':
-          case 'd':
-            icon = Iconsax.document_code;
-            color = const Color(0xFFE91E63); // Pink
-            break;
-          case 'e':
-          case 'f':
-            icon = Iconsax.document_favorite;
-            color = const Color(0xFF9C27B0); // Purple
-            break;
-          case 'g':
-          case 'h':
-            icon = Iconsax.document_cloud;
-            color = const Color(0xFF673AB7); // Deep Purple
-            break;
-          case 'i':
-          case 'j':
-            icon = Iconsax.document_normal;
-            color = const Color(0xFF3F51B5); // Indigo
-            break;
-          case 'k':
-          case 'l':
-            icon = Iconsax.document_filter;
-            color = const Color(0xFF2196F3); // Blue
-            break;
-          case 'm':
-          case 'n':
-            icon = Iconsax.document_forward;
-            color = const Color(0xFF03A9F4); // Light Blue
-            break;
-          case 'o':
-          case 'p':
-            icon = Iconsax.document_download;
-            color = const Color(0xFF00BCD4); // Cyan
-            break;
-          case 'q':
-          case 'r':
-            icon = Iconsax.document_upload;
-            color = const Color(0xFF009688); // Teal
-            break;
-          case 's':
-          case 't':
-            icon = Iconsax.document_text_1;
-            color = const Color(0xFF4CAF50); // Green
-            break;
-          case 'u':
-          case 'v':
-            icon = Iconsax.document_like;
-            color = const Color(0xFF8BC34A); // Light Green
-            break;
-          default:
-            icon = Iconsax.document_text;
-            color = const Color(0xFF607D8B); // Blue Grey
-        }
-        return (icon, color);
-    }
-  }
-
   Widget _buildTeamWidget(Thesis thesis) {
     final theme = Theme.of(context);
-    
+
     var isPending = thesis.status == ThesisStatus.pending;
 
     return Column(
@@ -815,24 +728,28 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
     }
   }
 
-  Future<void> _assignExaminer(User lecturer) async {
+  Future<void> _assignExaminer(
+      User lecturer, ThesisLectureExaminerType type) async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Assign Examiner'),
         content: Text(
-          'Are you sure you want to assign ${lecturer.name} as examiner?',
+          'Are you sure you want to assign ${lecturer.name} as ${type.name}?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              minimumSize: const Size(100, 44),
+            ),
             child: const Text('Cancel'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.primary,
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(100, 44),
             ),
             child: const Text('Assign'),
           ),
@@ -842,29 +759,35 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
 
     if (confirmed != true) return;
 
+    var thesisLecture = ThesisLecture(
+      user: lecturer,
+      role: ThesisLectureRole.examiner,
+      examinerType: type,
+    );
+
     final errorMessage = await ThesisController.to.assignExaminer(
-      widget.thesis.id,
-      lecturer.id,
+      widget.thesis,
+      thesisLecture,
     );
 
     if (errorMessage != null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+      return MyToast.showShadcnUIToast(
+        context,
+        'Error',
+        errorMessage,
+        isError: true,
       );
-    } else {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${lecturer.name} has been assigned as examiner'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
-      );
-      await _loadThesis();
     }
+
+    if (!mounted) return;
+    MyToast.showShadcnUIToast(
+      context,
+      'Success',
+      '${lecturer.name} has been assigned as $type examiner',
+      isError: false,
+    );
+    await _loadThesis();
   }
 
   Future<void> _showAssignLecturerDialog({
@@ -880,75 +803,105 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
             maxWidth: 400,
             maxHeight: 500,
           ),
-          child: Padding(
-            padding: EdgeInsets.all(AppTheme.spaceMD),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Assign $title',
-                  style: Theme.of(context).textTheme.titleLarge,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppBar(
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(28),
+                    topRight: Radius.circular(28),
+                  ),
                 ),
-                SizedBox(height: AppTheme.spaceMD),
-                Flexible(
-                  child: Obx(() {
-                    if (ThesisController.to.isLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    final lecturers = AdminController.to.lecturers;
-                    if (lecturers.isEmpty) {
-                      return const EmptyStateWidget(
-                        title: 'No lecturers available',
-                        message: 'Please add lecturers first',
-                        icon: Iconsax.user_tag,
-                      );
-                    }
-
-                    return ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: lecturers.length,
-                      itemBuilder: (context, index) {
-                        final lecturer = lecturers[index];
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor:
-                                Theme.of(context).colorScheme.primary,
-                            child: Text(
-                              lecturer.name[0].toUpperCase(),
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                    color:
-                                        Theme.of(context).colorScheme.onPrimary,
-                                  ),
-                            ),
-                          ),
-                          title: Text(lecturer.name),
-                          subtitle: Text(lecturer.department ?? ''),
-                          onTap: () {
-                            Navigator.pop(context);
-                            onAssign(lecturer);
-                          },
-                        );
-                      },
-                    );
-                  }),
-                ),
-                SizedBox(height: AppTheme.spaceMD),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                automaticallyImplyLeading: false,
+                scrolledUnderElevation: 0.0,
+                centerTitle: false,
+                forceMaterialTransparency: true,
+                // toolbarHeight: 60,
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                    Text(
+                      'Assign $title',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    IconButton(
+                      onPressed: () {
+                        context.pop();
+                      },
+                      icon: const Icon(Icons.close),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              // Description
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppTheme.spaceMD),
+                child: Text(
+                  'Select a available lecturer below to assign as $role',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+              SizedBox(height: AppTheme.spaceMD),
+              Flexible(
+                child: Obx(() {
+                  if (ThesisController.to.isLoadingMyThesis) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final lecturers = AdminController.to.lecturers;
+
+                  // Filter out lecturers that are already assigned as supervisor or examiner
+                  final filteredLecturers = lecturers
+                      .where((lecturer) =>
+                          !widget.thesis.supervisors
+                              .any((e) => e.user.id == lecturer.id) &&
+                          !widget.thesis.examiners
+                              .any((e) => e.user.id == lecturer.id))
+                      .toList();
+
+                  if (filteredLecturers.isEmpty) {
+                    return const EmptyStateWidget(
+                      title: 'No lecturers available',
+                      message: 'Please add lecturers first',
+                      icon: Iconsax.user_tag,
+                    );
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: filteredLecturers.length,
+                    itemBuilder: (context, index) {
+                      final lecturer = filteredLecturers[index];
+                      return ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          child: Text(
+                            lecturer.name[0].toUpperCase(),
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
+                                ),
+                          ),
+                        ),
+                        title: Text(lecturer.name),
+                        subtitle: Text(lecturer.email),
+                        onTap: () {
+                          Navigator.pop(context);
+                          onAssign(lecturer);
+                        },
+                      );
+                    },
+                  );
+                }),
+              ),
+              SizedBox(height: AppTheme.spaceMD),
+            ],
           ),
         ),
       ),
@@ -1071,7 +1024,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
               Expanded(
                 child: ListView.builder(
                   shrinkWrap: true,
-                  itemCount: widget.thesis.members.lecturers.length +
+                  itemCount: widget.thesis.members.value.lecturers.length +
                       1, // +1 for student
                   itemBuilder: (context, index) {
                     if (index == 0) {
@@ -1079,21 +1032,21 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                         onTap: () {},
                         visualDensity: VisualDensity.compact,
                         title: Text(
-                          widget.thesis.members.student.name,
+                          widget.thesis.members.value.student.name,
                           style:
                               Theme.of(context).textTheme.bodyMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                   ),
                         ),
                         subtitle: Text(
-                          widget.thesis.members.student.role.name,
+                          widget.thesis.members.value.student.role.name,
                           style: Theme.of(context).textTheme.labelSmall,
                         ),
                         leading: CircleAvatar(
                           backgroundColor:
                               Theme.of(context).colorScheme.primary,
                           child: Text(
-                            widget.thesis.members.student.name[0],
+                            widget.thesis.members.value.student.name[0],
                             style: Theme.of(context)
                                 .textTheme
                                 .titleMedium
@@ -1106,7 +1059,8 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                       );
                     }
 
-                    final member = widget.thesis.members.lecturers[index - 1];
+                    final member =
+                        widget.thesis.members.value.lecturers[index - 1];
                     return ListTile(
                       onTap: () {},
                       visualDensity: VisualDensity.compact,

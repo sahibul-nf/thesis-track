@@ -11,8 +11,8 @@ import 'package:thesis_track_flutter_app/app/widgets/card.dart';
 import 'package:thesis_track_flutter_app/app/widgets/custom_menu_item.dart';
 import 'package:thesis_track_flutter_app/app/widgets/popup_menu.dart';
 
-class ThesisListScreen extends GetView<ThesisController> {
-  const ThesisListScreen({super.key, required this.theses});
+class ThesisListView extends GetView<ThesisController> {
+  const ThesisListView({super.key, required this.theses});
 
   final List<Thesis> theses;
 
@@ -167,28 +167,28 @@ class ThesisListScreen extends GetView<ThesisController> {
                         ),
                       ),
                       // Progress Info
-                        Padding(
-                          padding: EdgeInsets.only(left: AppTheme.spaceSM),
-                          child: Text.rich(
-                            TextSpan(
-                              children: [
-                                TextSpan(
-                                  text: '${progresses.length} ',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                      Padding(
+                        padding: EdgeInsets.only(left: AppTheme.spaceSM),
+                        child: Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: '${progresses.length} ',
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                TextSpan(
+                              ),
+                              TextSpan(
                                 text: 'Sessions',
-                                  style: theme.textTheme.labelSmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
+                      ),
                       // Member Count
                       Padding(
                         padding: EdgeInsets.only(left: AppTheme.spaceSM),
@@ -196,7 +196,7 @@ class ThesisListScreen extends GetView<ThesisController> {
                           TextSpan(
                             children: [
                               TextSpan(
-                                text: '${thesis.members.total} ',
+                                text: '${thesis.members.value.total} ',
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
