@@ -131,7 +131,7 @@ class ProgressController extends GetxController {
         },
         (progress) {
           // assign progress to thesis
-          thesis.progresses.add(progress);
+          thesis.progresses.insert(0, progress);
           return null;
         },
       );

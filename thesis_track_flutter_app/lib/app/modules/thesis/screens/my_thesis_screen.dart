@@ -51,11 +51,11 @@ class MyThesisScreen extends GetView<ThesisController> {
         return ThesisListView(theses: theses);
       }
 
-      if (controller.myTheses.length > 1) {
-        return const Center(
-          child: Text('You have multiple theses, please select one'),
-        );
-      }
+      // if (controller.myTheses.length > 1) {
+      //   return const Center(
+      //     child: Text('You have multiple theses, please select one'),
+      //   );
+      // }
 
       if (controller.isLoadingMyThesis) {
         return ThesisDetailScreen(

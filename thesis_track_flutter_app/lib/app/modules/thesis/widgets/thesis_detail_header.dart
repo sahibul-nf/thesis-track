@@ -210,7 +210,24 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                               );
                             },
                             leading: const Icon(Iconsax.verify, size: 18),
-                            title: 'Assign Examiner',
+                            title: 'Assign Examiner for Proposal Defense',
+                          ),
+
+                        if (RoleGuard.canAssignFinalDefenseExaminer(
+                            widget.thesis))
+                          CustomMenuItem(
+                            onTap: () {
+                              _showAssignLecturerDialog(
+                                title: 'Final Defense Examiner',
+                                role: 'final defense examiner',
+                                onAssign: (lecturer) => _assignExaminer(
+                                    lecturer,
+                                    ThesisLectureExaminerType
+                                        .finalDefenseExaminer),
+                              );
+                            },
+                            leading: const Icon(Iconsax.verify, size: 18),
+                            title: 'Assign Examiner for Final Defense',
                           ),
 
                         if (RoleGuard.canApproveThesisForProposalDefense(
@@ -239,6 +256,14 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             onTap: _showAcceptThesisDialog,
                             leading: const Icon(Iconsax.tick_circle, size: 18),
                             title: 'Accept Submission',
+                          ),
+
+                        if (RoleGuard.canApproveThesisForFinalization(
+                            widget.thesis))
+                          CustomMenuItem(
+                            onTap: _showApproveFinalizationDialog,
+                            leading: const Icon(Iconsax.tick_circle, size: 18),
+                            title: 'Finalize Thesis',
                           ),
 
                         if (RoleGuard.canMarkAsCompleted(widget.thesis))
@@ -306,17 +331,25 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
           RoleGuard.canApproveThesisForProposalDefense(thesis).value;
       var canApproveFinalDefense =
           RoleGuard.canApproveThesisForFinalDefense(thesis);
+      final canAssignSupervisor = RoleGuard.canAssignSupervisor(thesis);
       final canAssignProposalDefenseExaminer =
           RoleGuard.canAssignProposalDefenseExaminer(thesis);
+      final canAssignFinalDefenseExaminer =
+          RoleGuard.canAssignFinalDefenseExaminer(thesis);
       var canAccept = RoleGuard.canAcceptThesisSubmission(thesis);
       var canMarkAsCompleted = RoleGuard.canMarkAsCompleted(thesis);
+      var canApproveFinalization =
+          RoleGuard.canApproveThesisForFinalization(thesis);
 
       return Visibility(
-        visible: canApproveProposalDefense ||
+        visible: canAccept ||
+            canApproveProposalDefense ||
             canApproveFinalDefense ||
-            canAccept ||
+            canAssignProposalDefenseExaminer ||
+            canAssignSupervisor ||
+            canAssignFinalDefenseExaminer ||
             canMarkAsCompleted ||
-            canAssignProposalDefenseExaminer,
+            canApproveFinalization,
         child: Padding(
           padding: EdgeInsets.only(top: AppTheme.spaceXL),
           child: Column(
@@ -346,18 +379,70 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 spacing: AppTheme.spaceSM,
                 children: [
+                  if (canAccept)
+                    FilledButton(
+                      onPressed: thesisC.isAssigningSupervisor
+                          ? null
+                          : () {
+                              _showAcceptThesisDialog();
+                            },
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(100, 44),
+                      ),
+                      child: thesisC.isAssigningSupervisor
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Accept Submission'),
+                    ),
+                  if (canAssignSupervisor)
+                    if (canAssignProposalDefenseExaminer)
+                      FilledButton(
+                        onPressed: thesisC.isAssigningSupervisor
+                            ? null
+                            : () {
+                                _showAssignLecturerDialog(
+                                  title: 'Supervisor',
+                                  role: ThesisLectureRole.supervisor.name,
+                                  onAssign: (lecturer) =>
+                                      _assignSupervisor(lecturer),
+                                );
+                              },
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size(100, 44),
+                        ),
+                        child: thesisC.isAssigningSupervisor
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  strokeCap: StrokeCap.round,
+                                ),
+                              )
+                            : const Text('Assign Supervisor'),
+                      ),
                   if (canAssignProposalDefenseExaminer)
                     FilledButton(
-                      onPressed: () {
-                        _showAssignLecturerDialog(
-                          title: 'Examiner',
-                          role: 'Proposal Defense examiner',
-                          onAssign: (lecturer) => _assignExaminer(
-                              lecturer,
-                              ThesisLectureExaminerType
-                                  .proposalDefenseExaminer),
-                        );
-                      },
+                      onPressed: thesisC.isAssigningExaminer
+                          ? null
+                          : () {
+                              _showAssignLecturerDialog(
+                                title: 'Examiner',
+                                role: ThesisLectureExaminerType
+                                    .proposalDefenseExaminer.name,
+                                onAssign: (lecturer) => _assignExaminer(
+                                  lecturer,
+                                  ThesisLectureExaminerType
+                                      .proposalDefenseExaminer,
+                                ),
+                              );
+                            },
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(100, 44),
                       ),
@@ -371,6 +456,36 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                               ),
                             )
                           : const Text('Assign Examiner'),
+                    ),
+                  if (canAssignFinalDefenseExaminer)
+                    FilledButton(
+                      onPressed: thesisC.isAssigningExaminer
+                          ? null
+                          : () {
+                              _showAssignLecturerDialog(
+                                title: 'Examiner',
+                                role: ThesisLectureExaminerType
+                                    .finalDefenseExaminer.name,
+                                onAssign: (lecturer) => _assignExaminer(
+                                  lecturer,
+                                  ThesisLectureExaminerType
+                                      .finalDefenseExaminer,
+                                ),
+                              );
+                            },
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(100, 44),
+                      ),
+                      child: thesisC.isAssigningExaminer
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Assign Final Defense Examiner'),
                     ),
                   if (canApproveProposalDefense)
                     FilledButton(
@@ -410,15 +525,24 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             )
                           : const Text('Approve Final Defense'),
                     ),
-                  if (canAccept)
+                  if (canApproveFinalization)
                     FilledButton(
-                      onPressed: () {
-                        _showAcceptThesisDialog();
-                      },
+                      onPressed: thesisC.isFinalizingThesis
+                          ? null
+                          : () => _showApproveFinalizationDialog(),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(100, 44),
                       ),
-                      child: const Text('Accept Submission'),
+                      child: thesisC.isFinalizingThesis
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Finalize Thesis'),
                     ),
                   if (canMarkAsCompleted)
                     FilledButton(
@@ -480,6 +604,50 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
         widget.thesis.supervisorId,
       );
     }
+  }
+
+  Future<void> _showApproveFinalizationDialog() async {
+    final confirmed = await showDialog<bool?>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Finalize Thesis Approval'),
+        content: const Text('Are you sure you want to finalize this thesis?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Finalize'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == false || confirmed == null) return;
+
+    String? err = await ThesisController.to.approveThesisForFinalization(
+      widget.thesis.id,
+    );
+
+    if (err != null) {
+      if (!mounted) return;
+      MyToast.showShadcnUIToast(
+        context,
+        'Error',
+        'Failed to finalize thesis: $err',
+        isError: true,
+      );
+    }
+
+    if (!mounted) return;
+    MyToast.showShadcnUIToast(
+      context,
+      'Success',
+      'Thesis successfully finalized',
+      isError: false,
+    );
   }
 
   void _showAssignReviewerDialog(ProgressModel progress) {
@@ -672,6 +840,68 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
             ),
           ],
         ),
+        if (thesis.finalizationApprovedExaminers.isNotEmpty) ...[
+          SizedBox(height: AppTheme.spaceMD),
+          Text(
+            'Finalization Approved by ${thesis.finalizationApprovedExaminers.length} examiners',
+            style: theme.textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          SizedBox(height: AppTheme.spaceSM),
+          Row(
+            spacing: AppTheme.spaceSM,
+            children: [
+              ...thesis.finalizationApprovedExaminers.map((examiner) {
+                return Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(AppTheme.cardRadius),
+                    border: Border.all(
+                      color: theme.colorScheme.outline.withOpacity(0.1),
+                    ),
+                  ),
+                  padding: EdgeInsets.all(AppTheme.spaceSM),
+                  child: Row(
+                    children: [
+                      sha.Avatar(
+                        initials: sha.Avatar.getInitials(examiner.user.name),
+                        size: 32,
+                        backgroundColor: theme.colorScheme.primaryContainer,
+                      ),
+                      SizedBox(width: AppTheme.spaceSM),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            examiner.user.name,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          sha.Button.text(
+                            onPressed: () {},
+                            style: const sha.ButtonStyle.ghost(
+                              density: sha.ButtonDensity.compact,
+                            ),
+                            child: Text(
+                              examiner.user.email,
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.outline,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(width: AppTheme.spaceLG)
+                    ],
+                  ),
+                );
+              }),
+            ],
+          )
+        ],
       ],
     );
   }
@@ -703,26 +933,31 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
 
     if (confirmed != true) return;
 
+    var thesisLecture = ThesisLecture(
+      user: lecturer,
+      role: ThesisLectureRole.supervisor,
+    );
+
     final errorMessage = await ThesisController.to.assignSupervisor(
-      widget.thesis.id,
-      lecturer.id,
+      widget.thesis,
+      thesisLecture,
     );
 
     if (errorMessage != null) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(errorMessage),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
+      return MyToast.showShadcnUIToast(
+        context,
+        'Error',
+        errorMessage,
+        isError: true,
       );
     } else {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('${lecturer.name} has been assigned as supervisor'),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-        ),
+      MyToast.showShadcnUIToast(
+        context,
+        'Success',
+        '${lecturer.name} has been assigned as supervisor',
+        isError: false,
       );
       await _loadThesis();
     }
@@ -784,7 +1019,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
     MyToast.showShadcnUIToast(
       context,
       'Success',
-      '${lecturer.name} has been assigned as $type examiner',
+      '${lecturer.name} has been assigned as ${type.name}',
       isError: false,
     );
     await _loadThesis();
@@ -852,14 +1087,56 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
 
                   final lecturers = AdminController.to.lecturers;
 
-                  // Filter out lecturers that are already assigned as supervisor or examiner
-                  final filteredLecturers = lecturers
-                      .where((lecturer) =>
-                          !widget.thesis.supervisors
-                              .any((e) => e.user.id == lecturer.id) &&
-                          !widget.thesis.examiners
-                              .any((e) => e.user.id == lecturer.id))
+                  // Get current examiners based on type
+                  var finalDefenseExaminers = widget.thesis.examiners
+                      .where((e) =>
+                          e.examinerType ==
+                          ThesisLectureExaminerType.finalDefenseExaminer)
                       .toList();
+
+                  var proposalDefenseExaminers = widget.thesis.examiners
+                      .where((e) =>
+                          e.examinerType ==
+                          ThesisLectureExaminerType.proposalDefenseExaminer)
+                      .toList();
+
+                  // Filter lecturers based on current assignment state and thesis status
+                  final filteredLecturers = lecturers.where((lecturer) {
+                    // Always exclude supervisors
+                    if (widget.thesis.supervisors
+                        .any((e) => e.user.id == lecturer.id)) {
+                      return false;
+                    }
+
+                    // For proposal defense examiner selection
+                    if (!widget.thesis.isProposalReady &&
+                        proposalDefenseExaminers.isEmpty) {
+                      // If selecting proposal examiner and none assigned yet
+                      // Exclude final defense examiners
+                      return !finalDefenseExaminers
+                          .any((e) => e.user.id == lecturer.id);
+                    }
+
+                    // For final defense examiner selection
+                    if (widget.thesis.isProposalReady &&
+                        !widget.thesis.isFinalExamReady &&
+                        finalDefenseExaminers.isEmpty) {
+                      // If selecting final examiner and none assigned yet
+                      // Can include proposal examiners (they can be final examiners too)
+                      return true;
+                    }
+
+                    // Default case: exclude already assigned examiners of the current type
+                    if (widget.thesis.isProposalReady) {
+                      // If assigning final examiner
+                      return !finalDefenseExaminers
+                          .any((e) => e.user.id == lecturer.id);
+                    } else {
+                      // If assigning proposal examiner
+                      return !proposalDefenseExaminers
+                          .any((e) => e.user.id == lecturer.id);
+                    }
+                  }).toList();
 
                   if (filteredLecturers.isEmpty) {
                     return const EmptyStateWidget(

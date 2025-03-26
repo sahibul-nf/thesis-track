@@ -99,31 +99,31 @@ class HomeStudentView extends StatelessWidget {
                                 'Initial',
                                 initialPhase ?? 0,
                                 weight:
-                                    15, // InitialSubmissionWeight + InProgressWeight
-                                isCompleted: initialPhase == 15,
+                                    10, // InitialSubmissionWeight + InProgressWeight
+                                isCompleted: initialPhase == 10,
                               ),
                               _buildPhaseProgress(
                                 context,
                                 'Proposal',
                                 proposalPhase ?? 0,
                                 weight:
-                                    35, // ProposalProgressWeight + ProposalApprovalWeight
-                                isCompleted: proposalPhase == 35,
+                                    25, // ProposalProgressWeight + ProposalApprovalWeight
+                                isCompleted: proposalPhase == 25,
                               ),
                               _buildPhaseProgress(
                                 context,
                                 'Research',
                                 researchPhase ?? 0,
-                                weight: 15, // ResearchProgressWeight
-                                isCompleted: researchPhase == 15,
+                                weight: 35, // ResearchProgressWeight
+                                isCompleted: researchPhase == 35,
                               ),
                               _buildPhaseProgress(
                                 context,
                                 'Final',
                                 finalPhase ?? 0,
                                 weight:
-                                    35, // FinalProgressWeight + FinalApprovalWeight + CompletionWeight
-                                isCompleted: finalPhase == 35,
+                                    30, // FinalProgressWeight + FinalApprovalWeight + CompletionWeight
+                                isCompleted: finalPhase == 30,
                               ),
                             ],
                           ),

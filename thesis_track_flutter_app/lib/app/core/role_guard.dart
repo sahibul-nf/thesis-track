@@ -1,4 +1,4 @@
-import 'package:get/get_rx/src/rx_types/rx_types.dart';
+import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
@@ -149,6 +149,29 @@ class RoleGuard {
     return true;
   }
 
+  static bool canAssignFinalDefenseExaminer(Thesis thesis) {
+    final user = getCurrentUser();
+    if (user == null) return false;
+
+    final role = user.role;
+    if (role != UserRole.admin) return false;
+
+    // Thesis must be in progress
+    if (thesis.status != ThesisStatus.inProgress) return false;
+
+    // Maximum 2 examiners with role final defense
+    var allFinalDefenseExaminers = thesis.examiners
+        .where((e) =>
+            e.examinerType == ThesisLectureExaminerType.finalDefenseExaminer)
+        .toList();
+    if (allFinalDefenseExaminers.length >= 2) return false;
+
+    // Thesis must be final exam ready
+    if (!thesis.isFinalExamReady) return false;
+
+    return true;
+  }
+
   /// Approve Proposal Defense Thesis Guard
   /// Supervisor and examiners can approve a thesis
   static RxBool canApproveThesisForProposalDefense(Thesis thesis) {
@@ -202,31 +225,54 @@ class RoleGuard {
     if (thesis.status != ThesisStatus.inProgress) return false;
 
     // Lecturer must be a supervisor or examiner
-    var isSupervisor = thesis.supervisors.any((e) => e.user.id == lectureId);
-    if (!isSupervisor) return false;
+    var mySupervisor =
+        thesis.supervisors.firstWhereOrNull((e) => e.user.id == lectureId);
+    if (mySupervisor == null) return false;
 
-    // Supervisor or examiner must have at least progress session reviewed
-    var progressSessions = thesis.progresses;
-    if (progressSessions.isEmpty) return false;
+    // Check if current lecturer has already approved (either proposal or final)
+    if (mySupervisor.proposalDefenseApprovedAt != null ||
+        mySupervisor.finalDefenseApprovedAt != null) {
+      return false;
+    }
 
-    // Check if the progress session is reviewed
-    var isReviewed = progressSessions.any((e) =>
-        e.status.value.toLowerCase() == 'reviewed' &&
-        e.reviewerId == lectureId);
-    if (!isReviewed) return false;
+    // Supervisor must have at least one progress session reviewed
+    var myProgressSessions =
+        thesis.progresses.where((e) => e.reviewerId == lectureId).toList();
+    if (myProgressSessions.isEmpty) return false;
 
-    // Thesis must be have ready Proposal Defense
+    var hasReviewedProgress = myProgressSessions
+        .any((e) => e.status.value.toLowerCase() == 'reviewed');
+    if (!hasReviewedProgress) return false;
+
+    // Thesis must have ready Proposal Defense
     if (!thesis.isProposalReady) return false;
 
-    // Only can approve if have ready propoxsal defense examiner (just indicate that there have proposal defense examiner assigned) (on research phase)
-    var isReadyProposalDefenseExaminer = thesis.examiners.any((e) =>
-        e.examinerType == ThesisLectureExaminerType.proposalDefenseExaminer);
-    if (!isReadyProposalDefenseExaminer) return false;
+    // Check proposal defense examiner requirements
+    var proposalExaminers = thesis.examiners
+        .where((e) =>
+            e.examinerType == ThesisLectureExaminerType.proposalDefenseExaminer)
+        .toList();
 
-    // Check if the lecturer has approved the thesis for final defense
-    var isApprovedForFinalDefense = thesis.supervisors
-        .any((e) => e.user.id == lectureId && e.finalDefenseApprovedAt != null);
-    if (isApprovedForFinalDefense) return false;
+    // Must have proposal examiner with reviewed progress
+    var proposalExaminerProgressSessions = thesis.progresses
+        .where((e) =>
+            proposalExaminers.any((p) => p.user.id == e.reviewer.id) &&
+            e.status.value.toLowerCase() == 'reviewed')
+        .toList();
+
+    if (proposalExaminerProgressSessions.isEmpty) return false;
+
+    // Check for progress sessions after proposal defense examiner review
+    var lastProposalExaminerReview = proposalExaminerProgressSessions
+        .map((e) => e.createdAt)
+        .reduce((a, b) => a.isAfter(b) ? a : b);
+
+    var progressSessionsAfterExaminerReview = thesis.progresses
+        .where((e) => e.createdAt.isAfter(lastProposalExaminerReview))
+        .toList();
+
+    // Require at least 2 progress sessions after examiner review
+    if (progressSessionsAfterExaminerReview.length < 2) return false;
 
     return true;
   }
@@ -306,5 +352,41 @@ class RoleGuard {
     if (user == null) return false;
 
     return role == UserRole.student;
+  }
+
+  static bool canApproveThesisForFinalization(Thesis thesis) {
+    final user = getCurrentUser();
+    if (user == null) return false;
+    final role = user.role;
+
+    // Only lecturer assigned as final examiner can approve the thesis
+    if (role != UserRole.lecturer) return false;
+
+    // Thesis must be in progress
+    if (thesis.status != ThesisStatus.inProgress) return false;
+
+    // Lecturer must be a final examiner
+    var myFinalExaminer = thesis.examiners.firstWhereOrNull((e) =>
+        e.user.id == user.id &&
+        e.examinerType == ThesisLectureExaminerType.finalDefenseExaminer);
+    if (myFinalExaminer == null) return false;
+
+    // Thesis must be final exam ready
+    if (!thesis.isFinalExamReady) return false;
+
+    // Assigned progress sessions as final examiner must be reviewed
+    var myProgressSessions =
+        thesis.progresses.where((e) => e.reviewerId == user.id).toList();
+    if (myProgressSessions.isEmpty) return false;
+
+    var hasReviewedProgress = myProgressSessions
+        .any((e) => e.status.value.toLowerCase() == 'reviewed');
+    if (!hasReviewedProgress) return false;
+
+    // Check if has approved the thesis for finalization
+    var isApproved = myFinalExaminer.finalizeApprovedAt != null;
+    if (isApproved) return false;
+
+    return true;
   }
 }

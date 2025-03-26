@@ -132,6 +132,8 @@ class ThesisController extends GetxController {
   final _isCreating = false.obs;
   final _isApprovingForDefense = false.obs;
   final _isAssigningExaminer = false.obs;
+  final _isAssigningSupervisor = false.obs;
+  final _isFinalizingThesis = false.obs;
   final _topProgressTheses = <Thesis>[].obs;
   final _selectedYear = ''.obs;
   final _searchQuery = ''.obs;
@@ -146,6 +148,8 @@ class ThesisController extends GetxController {
   bool get isCreating => _isCreating.value;
   bool get isApprovingForDefense => _isApprovingForDefense.value;
   bool get isAssigningExaminer => _isAssigningExaminer.value;
+  bool get isAssigningSupervisor => _isAssigningSupervisor.value;
+  bool get isFinalizingThesis => _isFinalizingThesis.value;
   String get selectedYear => _selectedYear.value;
   List<Thesis> get topProgressTheses => _topProgressTheses;
   int get topProgressThesesCount => _topProgressTheses.length;
@@ -291,7 +295,7 @@ class ThesisController extends GetxController {
   /// Accept Thesis Submission & Assign Supervisor By Admin
   Future<String?> acceptThesis(String thesisId, String lectureId) async {
     try {
-      _isLoadingMyThesis.value = true;
+      _isAssigningSupervisor.value = true;
       final result =
           await _thesisRepository.assignSupervisor(thesisId, lectureId);
       return result.fold(
@@ -305,24 +309,31 @@ class ThesisController extends GetxController {
         },
       );
     } finally {
-      _isLoadingMyThesis.value = false;
+      _isAssigningSupervisor.value = false;
     }
   }
 
-  Future<String?> assignSupervisor(String thesisId, String lectureId) async {
+  Future<String?> assignSupervisor(
+    Thesis thesis,
+    ThesisLecture thesisLecture,
+  ) async {
     try {
-      _isLoadingMyThesis.value = true;
-      final result =
-          await _thesisRepository.assignSupervisor(thesisId, lectureId);
+      _isAssigningSupervisor.value = true;
+      final result = await _thesisRepository.assignSupervisor(
+        thesis.id,
+        thesisLecture.user.id,
+      );
       return result.fold(
         (failure) {
-          _error.value = failure.message;
           return failure.message;
         },
-        (_) => null,
+        (_) async {
+          thesis.supervisors.add(thesisLecture);
+          return null;
+        },
       );
     } finally {
-      _isLoadingMyThesis.value = false;
+      _isAssigningSupervisor.value = false;
     }
   }
 
@@ -386,6 +397,24 @@ class ThesisController extends GetxController {
       );
     } finally {
       _isLoadingMyThesis.value = false;
+    }
+  }
+
+  Future<String?> approveThesisForFinalization(String thesisId) async {
+    try {
+      _isFinalizingThesis.value = true;
+      final result = await _thesisRepository.approveThesisForFinalization(thesisId);
+      return result.fold(
+        (failure) {
+          return failure.message;
+        },
+        (_) async {
+          await getMyTheses(); // Refresh the list
+          return null;
+        },
+      );
+    } finally {
+      _isFinalizingThesis.value = false;
     }
   }
 
