@@ -103,6 +103,17 @@ class Thesis {
     return RxList<ThesisLecture>([...supervisors, ...examiners]);
   }
 
+  /// Get all finalization approved examiners
+  RxList<ThesisLecture> get finalizationApprovedExaminers {
+    return RxList<ThesisLecture>(
+      examiners
+          .where((e) =>
+              e.finalizeApprovedAt != null &&
+              e.examinerType == ThesisLectureExaminerType.finalDefenseExaminer)
+          .toList(),
+    );
+  }
+
   factory Thesis.fromJson(Map<String, dynamic> json) {
     List<ThesisLecture> supervisors = [];
     List<ThesisLecture> examiners = [];

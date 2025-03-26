@@ -172,51 +172,122 @@ class _ProgressSessionListState extends State<ProgressSessionList> {
   Widget _buildInfoCard() {
     final theme = Theme.of(context);
     final thesis = widget.thesis;
-    final userRole = AuthController.to.user?.role;
+    final user = AuthController.to.user;
+    final userRole = user?.role;
+    final currentUserId = user?.id;
+
+    var isMyThesis = thesis.student.id == currentUserId;
+    if (!isMyThesis) {
+      return const SizedBox.shrink();
+    }
+
+    if (userRole != UserRole.student) {
+      return const SizedBox.shrink();
+    }
+
+    if (thesis.status != ThesisStatus.inProgress) {
+      return const SizedBox.shrink();
+    }
 
     // Kondisi untuk Final Defense
-    if (thesis.isFinalExamReady &&
-        userRole == UserRole.student &&
-        thesis.examiners.any((e) =>
-            e.examinerType == ThesisLectureExaminerType.finalDefenseExaminer)) {
+    if (thesis.isFinalExamReady) {
+      final hasFinalDefenseExaminer = thesis.examiners.any((e) =>
+          e.examinerType == ThesisLectureExaminerType.finalDefenseExaminer &&
+          e.finalDefenseApprovedAt == null);
+      if (!hasFinalDefenseExaminer) {
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppTheme.spaceMD),
+            child:
+                const Text('Waiting for final defense examiner to be assigned'),
+          ),
+        );
+      }
+
+      // Daftar dosen yang terlibat dalam final defense
+      final finalDefenseInvolved = [
+        ...thesis.examiners.where((e) =>
+            e.examinerType == ThesisLectureExaminerType.finalDefenseExaminer),
+        ...thesis.supervisors
+      ];
+
+      // Dapatkan waktu final exam ready (waktu terakhir supervisor approve)
+      final finalExamReadyTime = thesis.supervisors
+          .map((s) => s.finalDefenseApprovedAt)
+          .where((date) => date != null)
+          .reduce((a, b) => a!.isAfter(b!) ? a : b);
+
+      // Filter progress yang dibuat setelah thesis final exam ready
+      final finalDefenseProgresses = thesis.progresses.where((progress) {
+        // Cek apakah progress dibuat setelah thesis final exam ready
+        return finalExamReadyTime != null &&
+            progress.createdAt.isAfter(finalExamReadyTime);
+      }).toList();
+
+      // Cek apakah setiap dosen yang terlibat sudah memiliki progress di fase final
+      final allHaveProgress = finalDefenseInvolved.every((lecturer) {
+        return finalDefenseProgresses
+            .any((progress) => progress.reviewer.id == lecturer.user.id);
+      });
+
+      // Jika semua dosen sudah memiliki progress, sembunyikan CTA
+      if (allHaveProgress) {
+        return const SizedBox.shrink();
+      }
+
+      // Hitung dosen yang belum memiliki progress
+      final remainingCount = finalDefenseInvolved.where((lecturer) {
+        return !finalDefenseProgresses
+            .any((progress) => progress.reviewer.id == lecturer.user.id);
+      }).length;
+
       return ThesisCard(
         padding: EdgeInsets.all(AppTheme.spaceMD),
-        backgroundColor: theme.colorScheme.secondaryContainer.withOpacity(0.2),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        backgroundColor: theme.colorScheme.secondary.withOpacity(0.1),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              children: [
-                Icon(
-                  Iconsax.medal_star,
-                  color: theme.colorScheme.secondary,
-                  size: 20,
-                ),
-                SizedBox(width: AppTheme.spaceSM),
-                Text(
-                  'Ready for Final Defense',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: theme.colorScheme.secondary,
-                    fontWeight: FontWeight.w600,
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Iconsax.medal_star,
+                        color: theme.colorScheme.secondary,
+                        size: 20,
+                      ),
+                      SizedBox(width: AppTheme.spaceSM),
+                      Text(
+                        'Ready for Final Defense',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: theme.colorScheme.secondary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            SizedBox(height: AppTheme.spaceSM),
-            Text(
-              'Congratulations! Your thesis is ready for final defense. Add a new progress to document your final defense preparation and results.',
-              style: theme.textTheme.bodySmall,
-            ),
-            SizedBox(height: AppTheme.spaceMD),
-            FilledButton.icon(
-              onPressed: () => context.go(
-                RouteLocation.toProgressCreate(thesis.id),
-                extra: thesis,
+                  SizedBox(height: AppTheme.spaceSM),
+                  Text(
+                    'Congratulations! Your thesis is ready for final defense. Add a new progress to document your final defense preparation and results.',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
               ),
-              icon: const Icon(Iconsax.add),
-              label: const Text('Add Final Defense Progress'),
-              style: FilledButton.styleFrom(
-                backgroundColor: theme.colorScheme.secondary,
+            ),
+            Flexible(
+              child: FilledButton.icon(
+                onPressed: () => context.go(
+                  RouteLocation.toProgressCreate(thesis.id),
+                  extra: thesis,
+                ),
+                icon: const Icon(Iconsax.add),
+                label: const Text('Create Final Defense Session'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size(100, 44),
+                  backgroundColor: theme.colorScheme.secondary,
+                ),
               ),
             ),
           ],
@@ -225,11 +296,8 @@ class _ProgressSessionListState extends State<ProgressSessionList> {
     }
 
     final proposalExaminers = thesis.examiners
-        .takeWhile(
-          (e) =>
-              e.examinerType ==
-              ThesisLectureExaminerType.proposalDefenseExaminer,
-        )
+        .takeWhile((e) =>
+            e.examinerType == ThesisLectureExaminerType.proposalDefenseExaminer)
         .toList();
 
     // all progress assigned to the proposal examiner
@@ -237,17 +305,26 @@ class _ProgressSessionListState extends State<ProgressSessionList> {
         proposalExaminers.any((e) => e.user.id == p.reviewer.id) &&
         p.status.value.toLowerCase() == 'reviewed');
 
-    final hasProposalDefenseSession = proposalExaminerProgresses.isNotEmpty;
-    if (hasProposalDefenseSession) {
+    final hasReadyProposalDefenseSession =
+        proposalExaminerProgresses.isNotEmpty;
+    if (hasReadyProposalDefenseSession) {
       return const SizedBox.shrink();
     }
 
     // Kondisi untuk Proposal Defense
-    if (thesis.isProposalReady &&
-        userRole == UserRole.student &&
-        thesis.examiners.any((e) =>
-            e.examinerType ==
-            ThesisLectureExaminerType.proposalDefenseExaminer)) {
+    if (thesis.isProposalReady) {
+      final hasProposalDefenseExaminer = thesis.examiners.any((e) =>
+          e.examinerType == ThesisLectureExaminerType.proposalDefenseExaminer);
+      if (!hasProposalDefenseExaminer) {
+        return Center(
+          child: Padding(
+            padding: EdgeInsets.all(AppTheme.spaceMD),
+            child: const Text(
+                'Waiting for proposal defense examiner to be assigned'),
+          ),
+        );
+      }
+
       return ThesisCard(
         padding: EdgeInsets.all(AppTheme.spaceMD),
         backgroundColor: theme.colorScheme.primary.withOpacity(0.1),

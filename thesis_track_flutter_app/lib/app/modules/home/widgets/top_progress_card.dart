@@ -227,6 +227,8 @@ class TopProgressCard extends StatelessWidget {
                           ? theme.colorScheme.secondary
                           : theme.colorScheme.onSurface,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   Text(
                     title,

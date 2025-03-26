@@ -8,7 +8,7 @@ class ApiConfig {
   static const String _apiBaseUrl =
       'https://thesis-track-production.up.railway.app/api/v1';
   static const String _apiBaseUrlDev = 'http://localhost:8080/api/v1';
-  static const String apiTimeout = '10000';
+  static const String apiTimeout = '15000';
 
   static String get apiBaseUrl => kDebugMode ? _apiBaseUrlDev : _apiBaseUrl;
 }

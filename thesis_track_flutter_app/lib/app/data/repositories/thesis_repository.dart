@@ -123,4 +123,16 @@ class ThesisRepository {
       return Left(ServerFailure(e.toString()));
     }
   }
+
+  Future<Either<Failure, Unit>> approveThesisForFinalization(
+      String thesisId) async {
+    try {
+      await _apiService.post('/theses/$thesisId/approve/finalize');
+      return const Right(unit);
+    } on DioException catch (e) {
+      return Left(ServerFailure(e.message ?? 'Server error occurred'));
+    } catch (e) {
+      return Left(ServerFailure(e.toString()));
+    }
+  }
 }

@@ -132,9 +132,12 @@ class ThesisController extends GetxController {
   final _isCreating = false.obs;
   final _isApprovingForDefense = false.obs;
   final _isAssigningExaminer = false.obs;
+  final _isAssigningSupervisor = false.obs;
+  final _isFinalizingThesis = false.obs;
   final _topProgressTheses = <Thesis>[].obs;
   final _selectedYear = ''.obs;
   final _searchQuery = ''.obs;
+  final selectedStatus = Rxn<ThesisStatus>();
 
   List<Thesis> get allTheses => _allTheses.value;
   List<Thesis> get myTheses => _myTheses.value;
@@ -145,6 +148,8 @@ class ThesisController extends GetxController {
   bool get isCreating => _isCreating.value;
   bool get isApprovingForDefense => _isApprovingForDefense.value;
   bool get isAssigningExaminer => _isAssigningExaminer.value;
+  bool get isAssigningSupervisor => _isAssigningSupervisor.value;
+  bool get isFinalizingThesis => _isFinalizingThesis.value;
   String get selectedYear => _selectedYear.value;
   List<Thesis> get topProgressTheses => _topProgressTheses;
   int get topProgressThesesCount => _topProgressTheses.length;
@@ -154,13 +159,25 @@ class ThesisController extends GetxController {
   String get searchQuery => _searchQuery.value;
 
   List<Thesis> get filteredTheses {
-    if (_searchQuery.value.isEmpty) return _allTheses.value;
+    var filtered = _allTheses.value;
+    
+    // Apply search filter
+    if (_searchQuery.value.isNotEmpty) {
+      filtered = filtered.where((thesis) {
+        return thesis.title
+            .toLowerCase()
+            .contains(_searchQuery.value.toLowerCase());
+      }).toList();
+    }
 
-    return _allTheses.value.where((thesis) {
-      return thesis.title
-          .toLowerCase()
-          .contains(_searchQuery.value.toLowerCase());
-    }).toList();
+    // Apply status filter
+    if (selectedStatus.value != null) {
+      filtered = filtered.where((thesis) {
+        return thesis.status == selectedStatus.value;
+      }).toList();
+    }
+
+    return filtered;
   }
 
   @override
@@ -278,7 +295,7 @@ class ThesisController extends GetxController {
   /// Accept Thesis Submission & Assign Supervisor By Admin
   Future<String?> acceptThesis(String thesisId, String lectureId) async {
     try {
-      _isLoadingMyThesis.value = true;
+      _isAssigningSupervisor.value = true;
       final result =
           await _thesisRepository.assignSupervisor(thesisId, lectureId);
       return result.fold(
@@ -292,24 +309,31 @@ class ThesisController extends GetxController {
         },
       );
     } finally {
-      _isLoadingMyThesis.value = false;
+      _isAssigningSupervisor.value = false;
     }
   }
 
-  Future<String?> assignSupervisor(String thesisId, String lectureId) async {
+  Future<String?> assignSupervisor(
+    Thesis thesis,
+    ThesisLecture thesisLecture,
+  ) async {
     try {
-      _isLoadingMyThesis.value = true;
-      final result =
-          await _thesisRepository.assignSupervisor(thesisId, lectureId);
+      _isAssigningSupervisor.value = true;
+      final result = await _thesisRepository.assignSupervisor(
+        thesis.id,
+        thesisLecture.user.id,
+      );
       return result.fold(
         (failure) {
-          _error.value = failure.message;
           return failure.message;
         },
-        (_) => null,
+        (_) async {
+          thesis.supervisors.add(thesisLecture);
+          return null;
+        },
       );
     } finally {
-      _isLoadingMyThesis.value = false;
+      _isAssigningSupervisor.value = false;
     }
   }
 
@@ -376,6 +400,24 @@ class ThesisController extends GetxController {
     }
   }
 
+  Future<String?> approveThesisForFinalization(String thesisId) async {
+    try {
+      _isFinalizingThesis.value = true;
+      final result = await _thesisRepository.approveThesisForFinalization(thesisId);
+      return result.fold(
+        (failure) {
+          return failure.message;
+        },
+        (_) async {
+          await getMyTheses(); // Refresh the list
+          return null;
+        },
+      );
+    } finally {
+      _isFinalizingThesis.value = false;
+    }
+  }
+
   // Get unique years from theses
   List<String?> get availableYears {
     final years =
@@ -421,5 +463,9 @@ class ThesisController extends GetxController {
 
   void updateSearch(String query) {
     _searchQuery.value = query;
+  }
+
+  void updateStatusFilter(ThesisStatus? status) {
+    selectedStatus.value = status;
   }
 }
