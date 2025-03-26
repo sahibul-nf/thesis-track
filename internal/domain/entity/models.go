@@ -235,21 +235,23 @@ func (c Comment) MarshalJSON() ([]byte, error) {
 
 // Tambahkan konstanta untuk bobot progress
 const (
-	// Initial Submission Weight
-	InitialSubmissionWeight   float64 = 10  // Ketika thesis pertama disubmit
-	InProgressWeight         float64 = 5   // Ketika thesis disetujui admin
-	
+	// Initial Submission Weight 
+	InitialSubmissionWeight float64 = 5 // Ketika thesis pertama disubmit
+	InProgressWeight        float64 = 5  // Ketika thesis disetujui admin
+
 	// Proposal Phase Weights
-	ProposalProgressWeight   float64 = 15  // Progress submissions untuk proposal
-	ProposalApprovalWeight  float64 = 20  // Supervisor approvals untuk proposal
-	
+	ProposalProgressWeight float64 = 15 // Progress submissions untuk proposal
+	ProposalApprovalWeight float64 = 10 // Supervisor approvals untuk proposal
+
 	// Research Phase Weights
-	ResearchProgressWeight   float64 = 15  // Progress submissions selama penelitian
-	
+	ResearchProgressWeight float64 = 20 // Progress submissions selama penelitian
+	ResearchApprovalWeight  float64 = 15 // Approval oleh supervisor's dan examiners selama penelitian
+
 	// Final Phase Weights
-	FinalProgressWeight     float64 = 15  // Progress submissions untuk final
-	FinalApprovalWeight    float64 = 15  // Supervisor & examiner approvals untuk final
-	CompletionWeight       float64 = 5   // Final completion oleh admin
+	FinalProgressWeight        float64 = 10 // Progress submissions untuk final
+	FinalizationApprovalWeight float64 = 13 // Finalization approval oleh examiners
+	UploadFinalDocumentWeight  float64 = 5 // Upload final document oleh student
+	CompletionWeight           float64 = 2  // Final completion oleh admin
 )
 
 type ThesisProgress struct {
@@ -258,8 +260,8 @@ type ThesisProgress struct {
 }
 
 type ProgressDetails struct {
-	InitialPhase   float64 `json:"initial_phase"`
-	ProposalPhase  float64 `json:"proposal_phase"`
-	ResearchPhase  float64 `json:"research_phase"`
-	FinalPhase     float64 `json:"final_phase"`
+	InitialPhase  float64 `json:"initial_phase"`
+	ProposalPhase float64 `json:"proposal_phase"`
+	ResearchPhase float64 `json:"research_phase"`
+	FinalPhase    float64 `json:"final_phase"`
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"math"
 	"slices"
 	"time"
 
@@ -345,9 +346,9 @@ func (s *thesisService) assignLectureToThesis(ctx context.Context, thesisID, lec
 			if tl.Role != role {
 				return nil, errors.New("lecture is already assigned a different role for this thesis")
 			}
-
+			
 			// TODO: implement examiner can be assigned to both proposal defense and final defense
-			return nil, errors.New("lecture is already assigned this role for this thesis")
+			// return nil, errors.New("lecture is already assigned this role for this thesis")
 		}
 	}
 
@@ -484,20 +485,30 @@ func (s *thesisService) ApproveThesisForFinalize(ctx context.Context, thesisID, 
 		return err
 	}
 	
-	// Get and validate thesis lecture
-	thesisLecture, err := s.validateThesisLecture(thesisLectures, lectureID, entity.ExaminerRole)
-	if err != nil {
-		return err
+	// Get and validate thesis lecture for final defense examiner
+	var thesisLecture *entity.ThesisLecture
+	var isFinalDefenseExaminer bool
+	for _, tl := range thesisLectures {
+		if tl.LectureID == lectureID {
+			isFinalDefenseExaminer = tl.Role == entity.ExaminerRole && *tl.ExaminerType == entity.FinalDefenseExaminer
+			if isFinalDefenseExaminer {
+				thesisLecture = &tl
+				break
+			}
+		}
+	}
+	
+	if thesisLecture == nil {
+		return errors.New("lecture not assigned as final defense examiner")
+	}
+
+	if !isFinalDefenseExaminer {
+		return errors.New("only lecture assigned as final defense examiner can approve thesis to be finalized")
 	}
 	
 	// Check if all progress assigned to this examiner has been reviewed
 	if err := s.validateProgressReviews(ctx, thesisID, lectureID); err != nil {
 		return err
-	}
-	
-	isLectureFinalExaminer := thesisLecture.Role == "Examiner" && *thesisLecture.ExaminerType == entity.FinalDefenseExaminer
-	if !isLectureFinalExaminer {
-		return errors.New("only lecture assigned as final defense examiner can approve thesis to be finalized")
 	}
 
 	if !thesis.IsFinalExamReady {
@@ -677,16 +688,26 @@ func (s *thesisService) CalculateThesisProgress(ctx context.Context, thesis *ent
 		},
 	}
 
-	// 1. Initial Phase (15%)
+	// if thesis is completed, set the progress to 100%
+	if thesis.Status == entity.ThesisCompleted {
+		percentageProgress.TotalProgress = 100
+		percentageProgress.Details.InitialPhase = 10
+		percentageProgress.Details.ProposalPhase = 25
+		percentageProgress.Details.ResearchPhase = 35
+		percentageProgress.Details.FinalPhase = 30
+		return percentageProgress, nil
+	}
+
+	// 1. Initial Phase (10%)
 	percentageProgress.Details.InitialPhase = s.calculateInitialPhase(thesis)
 	
-	// 2. Proposal Phase (35%)
+	// 2. Proposal Phase (25%)
 	percentageProgress.Details.ProposalPhase = s.calculateProposalPhase(thesis, progresses)
 	
-	// 3. Research Phase (15%)
+	// 3. Research Phase (35%)
 	percentageProgress.Details.ResearchPhase = s.calculateResearchPhase(thesis, progresses)
 	
-	// 4. Final Phase (35%)
+	// 4. Final Phase (30%)
 	percentageProgress.Details.FinalPhase = s.calculateFinalPhase(thesis, progresses)
 
 	// Calculate total progress
@@ -698,89 +719,328 @@ func (s *thesisService) CalculateThesisProgress(ctx context.Context, thesis *ent
 	return percentageProgress, nil
 }
 
+// calculateInitialPhase calculates the initial phase progress
+// maximum progress is 10
 func (s *thesisService) calculateInitialPhase(thesis *entity.Thesis) float64 {
 	var progress float64 = 0
-	
+
 	// Initial submission
 	if thesis.Status != "" {
 		progress += entity.InitialSubmissionWeight
 	}
 
 	var index = thesis.Status.Index()
-	
+
 	// Admin approval to start
 	if index >= entity.ThesisInProgress.Index() {
 		progress += entity.InProgressWeight
 	}
-	
+
 	return progress
 }
 
+// calculateProposalPhase calculates the proposal phase progress
+// maximum progress is 25
 func (s *thesisService) calculateProposalPhase(thesis *entity.Thesis, progresses []entity.Progress) float64 {
 	var progress float64 = 0
-	
-	// Calculate progress submissions for proposal
-	proposalProgress := s.calculateProgressSubmissions(thesis, "Proposal", progresses)
-	progress += (proposalProgress * entity.ProposalProgressWeight)
-	
-	// Calculate supervisor approvals for proposal
+
 	if thesis.IsProposalReady {
-		progress += entity.ProposalApprovalWeight
+		return entity.ProposalProgressWeight + entity.ProposalApprovalWeight
 	}
-	
+
+	// Calculate progress submissions for proposal
+	proposalProgress := s.calculateProgressSubmissions(thesis, "proposal", progresses)
+	progress += (proposalProgress * entity.ProposalProgressWeight)
+
+	// Calculate supervisor approvals for proposal
+	proposalApproval := s.calculateApprovalForProposal(thesis)
+	progress += (proposalApproval * entity.ProposalApprovalWeight)
+
 	return progress
 }
 
 func (s *thesisService) calculateResearchPhase(thesis *entity.Thesis, progresses []entity.Progress) float64 {
+	var progress float64 = 0
+
 	if !thesis.IsProposalReady {
 		return 0
 	}
-	
+
+	if thesis.IsFinalExamReady {
+		return entity.ResearchProgressWeight + entity.ResearchApprovalWeight
+	}
+
 	// Calculate progress during research phase
-	researchProgress := s.calculateProgressSubmissions(thesis, "Research", progresses)
-	return researchProgress * entity.ResearchProgressWeight
+	researchProgress := s.calculateProgressSubmissions(thesis, "research", progresses)
+	progress += (researchProgress * entity.ResearchProgressWeight)
+
+	// Calculate approval for research
+	researchApproval := s.calculateApprovalForResearch(thesis)
+	progress += (researchApproval * entity.ResearchApprovalWeight)
+
+	return progress
 }
 
 func (s *thesisService) calculateFinalPhase(thesis *entity.Thesis, progresses []entity.Progress) float64 {
 	var progress float64 = 0
-	
+
 	// Calculate progress submissions for final
-	finalProgress := s.calculateProgressSubmissions(thesis, "Final", progresses)
+	finalProgress := s.calculateProgressSubmissions(thesis, "final", progresses)
 	progress += (finalProgress * entity.FinalProgressWeight)
-	
-	// Calculate approvals for final defense
-	if thesis.IsFinalExamReady {
-		progress += entity.FinalApprovalWeight
+
+	// Calculate approvals for finalization
+	progress += s.calculateApprovalForFinalization(thesis) * entity.FinalizationApprovalWeight
+
+	// Calculate upload final document
+	if thesis.FinalDocumentURL != "" {
+		progress += entity.UploadFinalDocumentWeight
 	}
-	
+
 	// Final completion by admin
 	if thesis.Status == entity.ThesisCompleted {
 		progress += entity.CompletionWeight
 	}
-	
+
 	return progress
 }
 
 func (s *thesisService) calculateProgressSubmissions(thesis *entity.Thesis, phase string, progresses []entity.Progress) float64 {
-	var completedCount float64 = 0
-	var totalExpected float64 = 1 // minimum expected submissions
-	
-	for _, thesisLecture := range thesis.ThesisLectures {
-		if thesisLecture.Role == entity.SupervisorRole {
-			totalExpected++ // increase expected submissions for each supervisor
-		}
-	}
-	
-	for _, progress := range progresses {
-		if progress.Status == entity.ProgressReviewed {
-			completedCount++
-		}
-	}
-	
-	progressRatio := completedCount / totalExpected
-	if progressRatio > 1 {
-		progressRatio = 1
-	}
-	
-	return progressRatio
+    var completedCount float64 = 0
+    var totalExpected float64 = 0
+    var assignedLectures []entity.ThesisLecture
+
+    // Dapatkan waktu approval dari thesis lectures untuk timeline
+    var proposalApprovalTimes []time.Time
+    var finalDefenseApprovalTimes []time.Time
+    var finalizeApprovalTimes []time.Time
+
+    for _, tl := range thesis.ThesisLectures {
+        if tl.ProposalDefenseApprovedAt != nil {
+            proposalApprovalTimes = append(proposalApprovalTimes, *tl.ProposalDefenseApprovedAt)
+        }
+        if tl.FinalDefenseApprovedAt != nil {
+            finalDefenseApprovalTimes = append(finalDefenseApprovalTimes, *tl.FinalDefenseApprovedAt)
+        }
+        if tl.FinalizeApprovedAt != nil {
+            finalizeApprovalTimes = append(finalizeApprovalTimes, *tl.FinalizeApprovedAt)
+        }
+    }
+
+    // Tentukan batas waktu untuk setiap phase
+    var proposalReadyTime, finalExamReadyTime *time.Time
+    if len(proposalApprovalTimes) > 0 {
+        latest := proposalApprovalTimes[0]
+        for _, t := range proposalApprovalTimes {
+            if t.After(latest) {
+                latest = t
+            }
+        }
+        proposalReadyTime = &latest
+    }
+    if len(finalDefenseApprovalTimes) > 0 {
+        latest := finalDefenseApprovalTimes[0]
+        for _, t := range finalDefenseApprovalTimes {
+            if t.After(latest) {
+                latest = t
+            }
+        }
+        finalExamReadyTime = &latest
+    }
+
+    // Filter progress berdasarkan timeline dan role
+    var relevantProgresses []entity.Progress
+    switch phase {
+    case "proposal":
+        // Progress sebelum proposal ready
+        for _, progress := range progresses {
+            if proposalReadyTime == nil || progress.CreatedAt.Before(*proposalReadyTime) {
+                relevantProgresses = append(relevantProgresses, progress)
+            }
+        }
+        // Hitung expected dari supervisor yang belum approve
+        for _, thesisLecture := range thesis.ThesisLectures {
+            if thesisLecture.Role == entity.SupervisorRole && 
+               thesisLecture.ProposalDefenseApprovedAt == nil {
+                totalExpected++
+                assignedLectures = append(assignedLectures, thesisLecture)
+            }
+        }
+
+    case "research":
+        // Progress antara proposal ready dan final exam ready
+        if thesis.IsProposalReady && !thesis.IsFinalExamReady {
+            for _, progress := range progresses {
+                if (proposalReadyTime != nil && progress.CreatedAt.After(*proposalReadyTime)) &&
+                   (finalExamReadyTime == nil || progress.CreatedAt.Before(*finalExamReadyTime)) {
+                    relevantProgresses = append(relevantProgresses, progress)
+                }
+            }
+            // Hitung expected dari supervisor dan proposal examiner
+            for _, thesisLecture := range thesis.ThesisLectures {
+                if thesisLecture.Role == entity.SupervisorRole {
+                    totalExpected++
+                    assignedLectures = append(assignedLectures, thesisLecture)
+                } else if thesisLecture.Role == entity.ExaminerRole && 
+                          thesisLecture.ExaminerType != nil && 
+                          *thesisLecture.ExaminerType == entity.ProposalDefenseExaminer {
+                    totalExpected++
+                    assignedLectures = append(assignedLectures, thesisLecture)
+                }
+            }
+        }
+
+    case "final":
+        // Progress setelah final exam ready
+        if thesis.IsFinalExamReady {
+            for _, progress := range progresses {
+                if finalExamReadyTime != nil && progress.CreatedAt.After(*finalExamReadyTime) {
+                    relevantProgresses = append(relevantProgresses, progress)
+                }
+            }
+            for _, thesisLecture := range thesis.ThesisLectures {
+				// Hitung expected dari final examiner
+                if thesisLecture.Role == entity.ExaminerRole && 
+                   thesisLecture.ExaminerType != nil && 
+                   *thesisLecture.ExaminerType == entity.FinalDefenseExaminer {
+                    totalExpected++
+                    assignedLectures = append(assignedLectures, thesisLecture)
+                }
+
+				// Hitung expected dari supervisor
+				if thesisLecture.Role == entity.SupervisorRole {
+					totalExpected++
+					assignedLectures = append(assignedLectures, thesisLecture)
+				}
+            }
+        }
+    }
+
+    if totalExpected == 0 {
+        return 0
+    }
+
+    // Hitung completed submissions
+    for _, lecture := range assignedLectures {
+        for _, progress := range relevantProgresses {
+            if progress.ReviewerID == lecture.LectureID && 
+               progress.Status == entity.ProgressReviewed {
+                completedCount++
+                break // Hanya hitung satu progress reviewed per lecturer
+            }
+        }
+    }
+
+    progressRatio := completedCount / totalExpected
+    if progressRatio > 1 {
+        progressRatio = 1
+    }
+
+    return progressRatio
+}
+
+// Calculate approval for finalization (Final Defense)
+func (s *thesisService) calculateApprovalForFinalization(thesis *entity.Thesis) float64 {
+    var approvedCount float64 = 0
+    var totalExpected float64 = 0
+
+    // Hanya hitung jika thesis sudah Final Exam Ready
+    if !thesis.IsFinalExamReady {
+        return 0
+    }
+
+    for _, thesisLecture := range thesis.ThesisLectures {
+        if thesisLecture.Role == entity.ExaminerRole && 
+           thesisLecture.ExaminerType != nil && 
+           *thesisLecture.ExaminerType == entity.FinalDefenseExaminer {
+            totalExpected++
+            if thesisLecture.FinalizeApprovedAt != nil {
+                approvedCount++
+            }
+        }
+    }
+
+    if totalExpected == 0 {
+        return 0
+    }
+
+    return math.Min(approvedCount/totalExpected, 1)
+}
+
+// Calculate approval for proposal
+func (s *thesisService) calculateApprovalForProposal(thesis *entity.Thesis) float64 {
+    var approvedCount float64 = 0
+    var totalExpected float64 = 0
+
+    // // Jika sudah Proposal Ready, return 1 (100%)
+    // if thesis.IsProposalReady {
+    //     return 1
+    // }
+
+    for _, thesisLecture := range thesis.ThesisLectures {
+        if thesisLecture.Role == entity.SupervisorRole {
+            totalExpected++
+            if thesisLecture.ProposalDefenseApprovedAt != nil {
+                approvedCount++
+            }
+        }
+    }
+
+    if totalExpected == 0 {
+        return 0
+    }
+
+    return math.Min(approvedCount/totalExpected, 1)
+}
+
+// Calculate approval for research
+func (s *thesisService) calculateApprovalForResearch(thesis *entity.Thesis) float64 {
+    var approvedCount float64 = 0
+    var totalExpected float64 = 0
+
+    // Hitung supervisor approvals
+    for _, thesisLecture := range thesis.ThesisLectures {
+        if thesisLecture.Role == entity.SupervisorRole {
+            totalExpected++
+            if thesisLecture.FinalDefenseApprovedAt != nil {
+                approvedCount++
+            }
+        }
+    }
+
+    // Hitung proposal examiner approvals
+    // var proposalExaminersCount float64 = 0
+    // var proposalExaminersApproved float64 = 0
+    
+    // for _, thesisLecture := range thesis.ThesisLectures {
+    //     if thesisLecture.Role == entity.ExaminerRole && 
+    //        thesisLecture.ExaminerType != nil && 
+    //        *thesisLecture.ExaminerType == entity.ProposalDefenseExaminer {
+    //         proposalExaminersCount++
+    //         // Untuk examiner proposal, cukup memastikan mereka sudah memberikan review
+    //         if len(thesis.Progresses) > 0 {
+    //             hasReviewed := false
+    //             for _, progress := range thesisLecture.Progresses {
+    //                 if progress.Phase == "research" && progress.Status == entity.ProgressReviewed {
+    //                     hasReviewed = true
+    //                     break
+    //                 }
+    //             }
+    //             if hasReviewed {
+    //                 proposalExaminersApproved++
+    //             }
+    //         }
+    //     }
+    // }
+
+    // Tambahkan examiner counts ke total
+    // if proposalExaminersCount > 0 {
+    //     totalExpected += proposalExaminersCount
+    //     approvedCount += proposalExaminersApproved
+    // }
+
+    if totalExpected == 0 {
+        return 0
+    }
+
+    return math.Min(approvedCount/totalExpected, 1)
 }
