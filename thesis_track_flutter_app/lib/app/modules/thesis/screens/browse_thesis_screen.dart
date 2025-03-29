@@ -274,13 +274,13 @@ class _BrowseThesisScreenState extends State<BrowseThesisScreen> {
             if (theses.isEmpty && !controller.isLoadingAllTheses) {
               return _getEmptyStateContent(
                   userRole, context, controller.searchQuery);
-            }
+      }
 
-            if (controller.isLoadingAllTheses) {
-              return ThesisListView(theses: mockOtherTheses).asSkeleton();
-            }
+      if (controller.isLoadingAllTheses) {
+        return ThesisListView(theses: mockOtherTheses).asSkeleton();
+      }
 
-            return ThesisListView(theses: theses);
+      return ThesisListView(theses: theses);
           }),
         ),
       ],

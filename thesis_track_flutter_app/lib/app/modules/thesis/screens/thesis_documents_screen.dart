@@ -60,8 +60,7 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              if (RoleGuard.canUploadDocuments() &&
-                  thesis.status != 'completed') ...[
+              if (RoleGuard.canUploadFinalDocument(thesis)) ...[
                 ThesisCard(
                   title: 'Upload Document',
                   child: Column(
@@ -72,26 +71,25 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
                         style: Theme.of(context).textTheme.bodyMedium,
                       ),
                       const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: () => _uploadDocument(isDraft: true),
-                              child: const Text('Upload Draft'),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: FilledButton(
-                              onPressed: thesis.status == 'approved'
-                                  ? () => _uploadDocument(isDraft: false)
-                                  : null,
-                              child: const Text('Upload Final'),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (thesis.status != 'approved')
+                      // Row(
+                      //   children: [
+                      //     Expanded(
+                      //       child: FilledButton(
+                      //         onPressed: () => _uploadDocument(isDraft: true),
+                      //         child: const Text('Upload Draft'),
+                      //       ),
+                      //     ),
+                      //     const SizedBox(width: 16),
+                      //     Expanded(
+                      //       child: FilledButton(
+                      //         onPressed: thesis.status == ThesisStatus.approved
+                      //             ? () => _uploadDocument(isDraft: false)
+                      //             : null,
+                      //         child: const Text('Upload Final'),
+                      //       ),
+                      //     ),
+                      //   ],
+                      // ),
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Text(
@@ -113,16 +111,14 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
                 _buildDocumentCard(
                   title: 'Draft Document',
                   url: thesis.draftDocumentUrl!,
-                  canDelete: RoleGuard.canUploadDocuments() &&
-                      thesis.status != 'completed',
+                  canDelete: RoleGuard.canUploadDraftDocument(thesis),
                 ),
               if (thesis.finalDocumentUrl != null) ...[
                 if (thesis.draftDocumentUrl != null) const SizedBox(height: 16),
                 _buildDocumentCard(
                   title: 'Final Document',
-                  url: thesis.finalDocumentUrl!,
-                  canDelete: RoleGuard.canUploadDocuments() &&
-                      thesis.status != 'completed',
+                  url: thesis.finalDocumentUrl!.value,
+                  canDelete: RoleGuard.canUploadFinalDocument(thesis),
                 ),
               ],
               if (thesis.draftDocumentUrl == null &&
@@ -272,7 +268,7 @@ class _ThesisDocumentsScreenState extends State<ThesisDocumentsScreen> {
         if (confirmed != true) return;
 
         errorMessage = await _fileController.uploadThesisFinal(
-          widget.thesis.id,
+          widget.thesis,
           file,
         );
       }

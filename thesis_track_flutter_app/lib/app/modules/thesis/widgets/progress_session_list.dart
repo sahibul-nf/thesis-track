@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
@@ -16,8 +17,10 @@ class ProgressSessionList extends StatefulWidget {
   const ProgressSessionList({
     super.key,
     required this.thesis,
+    this.onTapUploadFinal,
   });
   final Thesis thesis;
+  final void Function()? onTapUploadFinal;
 
   @override
   State<ProgressSessionList> createState() => _ProgressSessionListState();
@@ -176,6 +179,38 @@ class _ProgressSessionListState extends State<ProgressSessionList> {
     final userRole = user?.role;
     final currentUserId = user?.id;
 
+    // info card for admin when thesis is under review & final document is has been uploaded,
+    // show info card with button to review final document & mark thesis as completed
+    if (userRole == UserRole.admin &&
+        thesis.status == ThesisStatus.underReview &&
+        thesis.finalDocumentUrl?.isNotEmpty == true) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppTheme.spaceMD),
+          child: Text.rich(
+            textAlign: TextAlign.center,
+            TextSpan(
+              text:
+                  'Review the uploaded final document and mark the thesis as completed. Your prompt action will ensure timely approval and submission for graduation. ',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              children: [
+                TextSpan(
+                  text: 'Review Final Document',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = widget.onTapUploadFinal,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     var isMyThesis = thesis.student.id == currentUserId;
     if (!isMyThesis) {
       return const SizedBox.shrink();
@@ -183,6 +218,35 @@ class _ProgressSessionListState extends State<ProgressSessionList> {
 
     if (userRole != UserRole.student) {
       return const SizedBox.shrink();
+    }
+
+    if (thesis.status == ThesisStatus.underReview &&
+        (thesis.finalDocumentUrl == null || thesis.finalDocumentUrl!.isEmpty)) {
+      return Center(
+        child: Padding(
+          padding: EdgeInsets.all(AppTheme.spaceMD),
+          child: Text.rich(
+            textAlign: TextAlign.center,
+            TextSpan(
+              text:
+                  'Your thesis is nearing completion! To move forward, kindly upload your final document. ',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+              children: [
+                TextSpan(
+                  text: 'Upload Final Document',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                  ),
+                  recognizer: TapGestureRecognizer()
+                    ..onTap = widget.onTapUploadFinal,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     if (thesis.status != ThesisStatus.inProgress) {

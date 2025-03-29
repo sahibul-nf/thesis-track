@@ -8,7 +8,8 @@ class ApiConfig {
   static const String _apiBaseUrl =
       'https://thesis-track-production.up.railway.app/api/v1';
   static const String _apiBaseUrlDev = 'http://localhost:8080/api/v1';
-  static const String apiTimeout = '15000';
+  static const String apiSendTimeout = '15000';
+  static const String apiReceiveTimeout = '30000';
 
   static String get apiBaseUrl => kDebugMode ? _apiBaseUrlDev : _apiBaseUrl;
 }
@@ -27,14 +28,14 @@ class ApiService {
         baseUrl: ApiConfig.apiBaseUrl,
         connectTimeout: Duration(
           milliseconds: int.parse(
-            ApiConfig.apiTimeout,
+            ApiConfig.apiSendTimeout,
           ),
         ),
-        receiveTimeout: Duration(
-          milliseconds: int.parse(
-            ApiConfig.apiTimeout,
-          ),
-        ),
+        // receiveTimeout: Duration(
+        //   milliseconds: int.parse(
+        //     ApiConfig.apiReceiveTimeout,
+        //   ),
+        // ),
         headers: {'Content-Type': 'application/json'},
       ),
     );

@@ -36,9 +36,9 @@ class RouteGuard {
       return '/';
     }
 
-    if (!RoleGuard.canUploadDocuments() && location.contains('/documents')) {
-      return '/';
-    }
+    // if (!RoleGuard.canUploadDocuments() && location.contains('/documents')) {
+    //   return '/';
+    // }
 
     // Lecturer-specific routes
     // if (!RoleGuard.canReviewProgress() && location.contains('/review')) {

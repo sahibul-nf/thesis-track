@@ -546,11 +546,22 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                     ),
                   if (canMarkAsCompleted)
                     FilledButton(
-                      onPressed: () {},
+                      onPressed: thesisC.isMarkingAsCompleted
+                          ? null
+                          : () => _markAsCompleted(),
                       style: FilledButton.styleFrom(
                         minimumSize: const Size(100, 44),
                       ),
-                      child: const Text('Mark as Completed'),
+                      child: thesisC.isMarkingAsCompleted
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Mark as Completed'),
                     ),
                 ],
               ),
@@ -1250,10 +1261,31 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
       ),
     );
 
-    if (confirmed == true) {
-      await ThesisController.to.markAsCompleted(widget.thesis.id);
-      await _loadThesis();
+    if (confirmed == false || confirmed == null) return;
+
+    final errorMessage = await ThesisController.to.markAsCompleted(
+      widget.thesis.id,
+    );
+
+    if (errorMessage != null) {
+      if (!mounted) return;
+      return MyToast.showShadcnUIToast(
+        context,
+        'Error',
+        errorMessage,
+        isError: true,
+      );
     }
+
+    if (!mounted) return;
+    MyToast.showShadcnUIToast(
+      context,
+      'Success',
+      'Thesis marked as completed',
+      isError: false,
+    );
+
+    await _loadThesis();
   }
 
   /// List of members dialog

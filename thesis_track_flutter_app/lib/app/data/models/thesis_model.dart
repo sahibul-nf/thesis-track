@@ -50,7 +50,7 @@ class Thesis {
   final DateTime submissionDate;
   final DateTime? completionDate;
   final String? draftDocumentUrl;
-  final String? finalDocumentUrl;
+  RxString? finalDocumentUrl;
   final bool isProposalReady;
   final bool isFinalExamReady;
   final User student;
@@ -177,7 +177,7 @@ class Thesis {
           ? DateTime.parse(json['completed_date'] as String)
           : null,
       draftDocumentUrl: json['draft_document_url'] as String?,
-      finalDocumentUrl: json['final_document_url'] as String?,
+      finalDocumentUrl: RxString(json['final_document_url'] ?? ''),
       isProposalReady: json['is_proposal_ready'] as bool,
       isFinalExamReady: json['is_final_exam_ready'] as bool,
       student: User.fromJson(json['student'] as Map<String, dynamic>),
@@ -206,7 +206,7 @@ class Thesis {
       'submission_date': submissionDate.toIso8601String(),
       'completed_date': completionDate?.toIso8601String(),
       'draft_document_url': draftDocumentUrl,
-      'final_document_url': finalDocumentUrl,
+      'final_document_url': finalDocumentUrl?.value,
       'is_proposal_ready': isProposalReady,
       'is_final_exam_ready': isFinalExamReady,
       'student': student.toJson(),
@@ -230,7 +230,7 @@ class Thesis {
     DateTime? submissionDate,
     DateTime? completionDate,
     String? draftDocumentUrl,
-    String? finalDocumentUrl,
+    RxString? finalDocumentUrl,
     bool? isProposalReady,
     bool? isFinalExamReady,
     User? student,
