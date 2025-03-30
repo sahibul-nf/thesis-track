@@ -195,15 +195,7 @@ class AppRoutes {
               final thesis = state.extra as Thesis;
               return ProgressListScreen(thesis: thesis);
             },
-          ),
-
-          // Documents Route
-          GoRoute(
-            path: RouteLocation.thesisDocuments,
-            name: 'thesis_documents',
-            builder: (context, state) =>
-                ThesisDocumentsScreen(thesis: state.extra as Thesis),
-          ),
+          ),          
 
           // Documents Route
           GoRoute(

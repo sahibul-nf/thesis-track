@@ -1,8 +1,8 @@
 import 'package:dio/dio.dart' as d;
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
+import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 
 class ApiConfig {
   static const String _apiBaseUrl =
@@ -65,8 +65,7 @@ class ApiService {
         onError: (d.DioException e, handler) {
           if (e.response?.statusCode == 401) {
             // Handle token expiration
-            StorageService.clearAuthData();
-            Get.offAllNamed('/login');
+            AuthController.to.logout();
           }
           return handler.next(e);
         },
@@ -95,6 +94,8 @@ class ApiService {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     d.Options? options,
+    Function(int sent, int total)? onSendProgress,
+    Function(int sent, int total)? onReceiveProgress,
   }) async {
     try {
       return await dio.post(
@@ -102,6 +103,8 @@ class ApiService {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
       );
     } on d.DioException catch (e) {
       throw _handleError(e);

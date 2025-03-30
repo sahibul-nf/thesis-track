@@ -55,14 +55,12 @@ class _DocumentSectionState extends State<DocumentSection> {
     final theme = Theme.of(context);
     final thesis = widget.thesis;
 
-    return Padding(
+    return Obx(() {
+      return Padding(
       padding: EdgeInsets.all(AppTheme.spaceLG),
       child: ThesisCard(
-        child: SingleChildScrollView(
-          physics: const NeverScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+          child: ListView(
+            shrinkWrap: true,
             children: [
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -73,14 +71,14 @@ class _DocumentSectionState extends State<DocumentSection> {
                         Container(
                           padding: EdgeInsets.all(AppTheme.spaceXS),
                           decoration: BoxDecoration(
-                            color: AppTheme.successColor.withOpacity(0.1),
+                            color: theme.colorScheme.primary.withOpacity(0.1),
                             borderRadius:
                                 BorderRadius.circular(AppTheme.chipRadius),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Iconsax.document_favorite,
                             size: 16,
-                            color: AppTheme.successColor,
+                            color: theme.colorScheme.primary,
                           ),
                         ),
                         SizedBox(width: AppTheme.spaceSM),
@@ -98,31 +96,101 @@ class _DocumentSectionState extends State<DocumentSection> {
                       child: FilledButton.icon(
                         onPressed: () => _showUploadDialog(context),
                         icon: const Icon(Iconsax.document_upload),
-                        label: const Text('Upload Final Doc'),
+                        label: const Text('Upload Docs'),
                         style: FilledButton.styleFrom(
-                          minimumSize: const Size(100, 40),
-                          backgroundColor: AppTheme.successColor,
+                          minimumSize: const Size(100, 40),                          
                         ),
                       ),
                     ),
                 ],
               ),
               SizedBox(height: AppTheme.spaceMD),
-              if (widget.thesis.finalDocumentUrl?.isEmpty ?? true)
+              if (widget.thesis.finalDocumentUrlRx.isEmpty) ...[
                 Center(
-                  child: EmptyStateWidget(
-                    icon: Iconsax.document_favorite,
-                    title: 'No Final Document',
-                    message: canUploadFinal
-                        ? 'Upload your final thesis document. This should be the approved version after all revisions.'
-                        : 'Final document has not been uploaded yet',
-                  ),
-                )
-              else
+                  child: (FileController.to.isLoading)
+                      ? Container(
+                          padding: EdgeInsets.all(AppTheme.spaceLG),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 45,
+                                    height: 45,
+                                    child: CircularProgressIndicator(
+                                      value: FileController.to.isUploading
+                                          ? FileController.to.uploadProgress /
+                                              100
+                                          : null,
+                                      strokeWidth: 5,
+                                      strokeCap: StrokeCap.round,
+                                      backgroundColor: theme
+                                          .colorScheme.surfaceContainerHighest,
+                                      color: theme.colorScheme.primary,
+                                    ),
+                                  ),
+                                  if (FileController.to.isUploading) ...[
+                                    Column(
+                                      children: [
+                                        Text(
+                                          "${FileController.to.uploadProgress.toStringAsFixed(1)}%",
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: theme.colorScheme.primary,
+                                          ),
+                                        ),
+                                        Text(
+                                          "${FileController.to.formatBytes(FileController.to.bytesSent)}\n${FileController.to.formatBytes(FileController.to.totalBytes)}",
+                                          textAlign: TextAlign.center,
+                                          style: theme.textTheme.bodySmall
+                                              ?.copyWith(
+                                            color: theme
+                                                .colorScheme.onSurfaceVariant,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              SizedBox(height: AppTheme.spaceMD),
+                              Text(
+                                FileController.to.isUploading
+                                    ? 'Uploading your document...'
+                                    : 'Processing your document...',
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  color: theme.colorScheme.primary,
+                                ),
+                              ),
+                              SizedBox(height: AppTheme.spaceSM),
+                              Text(
+                                FileController.to.isUploading
+                                    ? 'Please wait while we upload your thesis document'
+                                    : 'Almost done! We are processing your document',
+                                textAlign: TextAlign.center,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : EmptyStateWidget(
+                          icon: Iconsax.document_favorite,
+                          title: 'No Final Document',
+                          message: canUploadFinal
+                              ? 'Upload your final thesis document. This should be the approved version after all revisions.'
+                              : 'Final document has not been uploaded yet',
+                        ),
+                ),
+              ] else
                 Container(
                   padding: EdgeInsets.all(AppTheme.spaceMD),
                   decoration: BoxDecoration(
-                    color: AppTheme.successColor.withOpacity(0.05),
+                    color: theme.colorScheme.primary.withOpacity(0.05),
                     borderRadius: BorderRadius.circular(AppTheme.cardRadius),
                   ),
                   child: Column(
@@ -133,14 +201,14 @@ class _DocumentSectionState extends State<DocumentSection> {
                           Container(
                             padding: EdgeInsets.all(AppTheme.spaceSM),
                             decoration: BoxDecoration(
-                              color: AppTheme.successColor.withOpacity(0.1),
+                              color: theme.colorScheme.primary.withOpacity(0.1),
                               borderRadius:
                                   BorderRadius.circular(AppTheme.chipRadius),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Iconsax.document_favorite,
                               size: 24,
-                              color: AppTheme.successColor,
+                              color: theme.colorScheme.primary,
                             ),
                           ),
                           SizedBox(width: AppTheme.spaceMD),
@@ -166,23 +234,23 @@ class _DocumentSectionState extends State<DocumentSection> {
                           Row(
                             children: [
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Iconsax.document_download,
                                   size: 20,
-                                  color: AppTheme.successColor,
+                                  color: theme.colorScheme.primary,
                                 ),
                                 onPressed: () => _openDocument(
-                                    widget.thesis.finalDocumentUrl!.value),
+                                    widget.thesis.finalDocumentUrlRx.value),
                                 tooltip: 'Download',
                               ),
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Iconsax.eye,
                                   size: 20,
-                                  color: AppTheme.successColor,
+                                  color: theme.colorScheme.primary,
                                 ),
                                 onPressed: () => _previewDocument(
-                                    widget.thesis.finalDocumentUrl!.value),
+                                    widget.thesis.finalDocumentUrlRx.value),
                                 tooltip: 'Preview',
                               ),
                             ],
@@ -199,17 +267,17 @@ class _DocumentSectionState extends State<DocumentSection> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(
+                            Icon(
                               Iconsax.info_circle,
                               size: 16,
-                              color: AppTheme.successColor,
+                              color: theme.colorScheme.primary,
                             ),
                             SizedBox(width: AppTheme.spaceXS),
                             Expanded(
                               child: Text(
-                                'Congratulations! This is the final, approved version of your thesis. Ensure it is comprehensive and error-free.',
+                                'Congratulations! This is the final, approved version of this thesis document. Ensure it is comprehensive and error-free.',
                                 style: theme.textTheme.bodySmall?.copyWith(
-                                  color: AppTheme.successColor,
+                                  color: theme.colorScheme.primary,
                                 ),
                               ),
                             ),
@@ -221,9 +289,9 @@ class _DocumentSectionState extends State<DocumentSection> {
                 ),
             ],
           ),
-        ),
       ),
     );
+    });
   }
 
   Future<void> _showUploadDialog(BuildContext context) async {
@@ -350,128 +418,190 @@ class _DocumentUploadDialogState extends State<DocumentUploadDialog> {
                                 : Theme.of(context).colorScheme.outlineVariant,
                         strokeWidth: 1,
                         dashPattern: const [6, 4],
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(8),
-                            color: isDragging.value
-                                ? Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withOpacity(0.1)
-                                : Theme.of(context)
-                                    .colorScheme
-                                    .surface
-                                    .withOpacity(0.1),
-                          ),
-                          child: InkWell(
-                            onTap: onChooseFile,
-                            borderRadius: BorderRadius.circular(8),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                // Icon and Text
-                                Container(
-                                  padding: EdgeInsets.symmetric(
-                                      vertical:
-                                          selectedFile.value == null ? 48 : 32),
-                                  width: double.infinity,
-                                  child: Column(
-                                    children: [
-                                      Icon(
-                                        selectedFile.value == null
-                                            ? isDragging.value
-                                                ? Iconsax.document_upload
-                                                : Iconsax.document_1
-                                            : Iconsax.document_text,
-                                        size: 32,
-                                        color: isDragging.value
-                                            ? Theme.of(context)
-                                                .colorScheme
-                                                .primary
-                                            : null,
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        selectedFile.value == null
-                                            ? 'Click to choose PDF file'
-                                            : selectedFile.value!.name,
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        textAlign: TextAlign.center,
-                                        style:
-                                            theme.textTheme.bodySmall?.copyWith(
-                                          color: isDragging.value
-                                              ? Theme.of(context)
-                                                  .colorScheme
-                                                  .primary
-                                              : null,
-                                        ),
-                                      ),
-                                      if (selectedFile.value == null) ...[
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'or drag and drop here',
-                                          style: theme.textTheme.bodySmall
-                                              ?.copyWith(
-                                                  // color: theme.colorScheme.onSurface,
+                        child: Stack(
+                          children: [
+                            // Background container
+                            Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(8),
+                                color: isDragging.value
+                                    ? Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withOpacity(0.1)
+                                    : Theme.of(context)
+                                        .colorScheme
+                                        .surface
+                                        .withOpacity(0.1),
+                              ),
+                              child: InkWell(
+                                onTap: onChooseFile,
+                                borderRadius: BorderRadius.circular(8),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Icon and Text
+                                    Container(
+                                      padding: EdgeInsets.symmetric(
+                                          vertical: selectedFile.value == null
+                                              ? 48
+                                              : 32),
+                                      width: double.infinity,
+                                      child: Column(
+                                        children: [
+                                          // Jika dalam proses upload, tampilkan progress circle
+                                          if (FileController.to.isLoading) ...[
+                                            Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                SizedBox(
+                                                  width: 45,
+                                                  height: 45,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    value: FileController
+                                                            .to.isUploading
+                                                        ? FileController.to
+                                                                .uploadProgress /
+                                                            100
+                                                        : null,
+                                                    strokeWidth: 5,
+                                                    strokeCap: StrokeCap.round,
+                                                    backgroundColor: theme
+                                                        .colorScheme
+                                                        .surfaceContainerHighest,
+                                                    color: theme
+                                                        .colorScheme.primary,
                                                   ),
-                                        ),
-                                      ],
+                                                ),
+                                                if (FileController
+                                                    .to.isUploading)
+                                                  Text(
+                                                    "${FileController.to.uploadProgress.toStringAsFixed(1)}%",
+                                                    style: theme
+                                                        .textTheme.titleSmall
+                                                        ?.copyWith(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      color: theme
+                                                          .colorScheme.primary
+                                                          .withOpacity(0.5),
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            // Bytes sent
+                                            Text(
+                                              FileController.to.isUploading
+                                                  ? "${FileController.to.formatBytes(FileController.to.bytesSent)} / ${FileController.to.formatBytes(FileController.to.totalBytes)}"
+                                                  : "Your document is being processed...",
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(),
+                                            ),
+                                          ] else ...[
+                                            // Normal icon saat tidak upload
+                                            Icon(
+                                              selectedFile.value == null
+                                                  ? isDragging.value
+                                                      ? Iconsax.document_upload
+                                                      : Iconsax.document_1
+                                                  : Iconsax.document_text,
+                                              size: 32,
+                                              color: isDragging.value
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                  : null,
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              selectedFile.value == null
+                                                  ? 'Click to choose PDF file'
+                                                  : selectedFile.value!.name,
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.center,
+                                              style: theme.textTheme.bodySmall
+                                                  ?.copyWith(
+                                                color: isDragging.value
+                                                    ? Theme.of(context)
+                                                        .colorScheme
+                                                        .primary
+                                                    : null,
+                                              ),
+                                            ),
+                                            if (selectedFile.value == null) ...[
+                                              const SizedBox(height: 4),
+                                              Text(
+                                                'or drag and drop here',
+                                                style:
+                                                    theme.textTheme.bodySmall,
+                                              ),
+                                            ],
+                                          ],
+                                        ],
+                                      ),
+                                    ),
+                                    // File Info
+                                    if (selectedFile.value != null &&
+                                        !FileController.to.isLoading) ...[
+                                      const Divider(),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceAround,
+                                        children: [
+                                          // Delete
+                                          TextButton.icon(
+                                            onPressed: () {
+                                              selectedFile.value = null;
+                                              errorMessage.value = null;
+                                            },
+                                            icon: const Icon(
+                                              Iconsax.trash,
+                                              size: 16,
+                                            ),
+                                            label: const Text('Delete'),
+                                            style: TextButton.styleFrom(
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              textStyle:
+                                                  theme.textTheme.bodySmall,
+                                              iconColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .error,
+                                              foregroundColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .error,
+                                            ),
+                                          ),
+                                          // Change
+                                          TextButton.icon(
+                                            onPressed: onChooseFile,
+                                            icon: const Icon(
+                                              Iconsax.refresh,
+                                              size: 16,
+                                            ),
+                                            label: const Text('Change'),
+                                            style: TextButton.styleFrom(
+                                              visualDensity:
+                                                  VisualDensity.compact,
+                                              textStyle:
+                                                  theme.textTheme.bodySmall,
+                                              foregroundColor: Theme.of(context)
+                                                  .colorScheme
+                                                  .primary,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      SizedBox(height: AppTheme.spaceSM)
                                     ],
-                                  ),
+                                  ],
                                 ),
-                                // File Info
-                                if (selectedFile.value != null) ...[
-                                  const Divider(),
-                                  Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceAround,
-                                    children: [
-                                      // Delete
-                                      TextButton.icon(
-                                        onPressed: () {
-                                          selectedFile.value = null;
-                                          errorMessage.value = null;
-                                        },
-                                        icon: const Icon(
-                                          Iconsax.trash,
-                                          size: 16,
-                                        ),
-                                        label: const Text('Delete'),
-                                        style: TextButton.styleFrom(
-                                          visualDensity: VisualDensity.compact,
-                                          textStyle: theme.textTheme.bodySmall,
-                                          iconColor: Theme.of(context)
-                                              .colorScheme
-                                              .error,
-                                          foregroundColor: Theme.of(context)
-                                              .colorScheme
-                                              .error,
-                                        ),
-                                      ),
-                                      // Change
-                                      TextButton.icon(
-                                        onPressed: onChooseFile,
-                                        icon: const Icon(
-                                          Iconsax.refresh,
-                                          size: 16,
-                                        ),
-                                        label: const Text('Change'),
-                                        style: TextButton.styleFrom(
-                                          visualDensity: VisualDensity.compact,
-                                          textStyle: theme.textTheme.bodySmall,
-                                          foregroundColor: Theme.of(context)
-                                              .colorScheme
-                                              .primary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  SizedBox(height: AppTheme.spaceSM)
-                                ],
-                              ],
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
                     ),
@@ -507,19 +637,17 @@ class _DocumentUploadDialogState extends State<DocumentUploadDialog> {
                   // Upload button
                   Obx(() {
                     bool isLoading = FileController.to.isLoading;
+                    bool isUploading = FileController.to.isUploading;
                     bool isDisabled = selectedFile.value == null || isLoading;
                     return FilledButton(
                       onPressed: isDisabled ? null : onUpload,
-                      style: FilledButton.styleFrom(),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 48),
+                      ),
                       child: isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                strokeCap: StrokeCap.round,
-                              ),
-                            )
+                          ? isUploading
+                              ? const Text('Uploading...')
+                              : const Text('Processing...')
                           : const Text('Upload'),
                     );
                   })

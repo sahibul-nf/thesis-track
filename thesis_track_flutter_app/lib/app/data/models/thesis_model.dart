@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart' show Colors, Color;
 import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
@@ -50,7 +52,7 @@ class Thesis {
   final DateTime submissionDate;
   final DateTime? completionDate;
   final String? draftDocumentUrl;
-  RxString? finalDocumentUrl;
+  final String? finalDocumentUrl;
   final bool isProposalReady;
   final bool isFinalExamReady;
   final User student;
@@ -83,6 +85,16 @@ class Thesis {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  /// Final Document URL
+  RxString get finalDocumentUrlRx {
+    return RxString(finalDocumentUrl ?? '');
+  }
+
+  setFinalDocumentUrlRx(String value) {
+    finalDocumentUrlRx.value = value;
+    log('finalDocumentUrlRx: $finalDocumentUrlRx');
+  }
 
   /// Progresses
   var progresses = RxList<ProgressModel>([]);
@@ -177,7 +189,7 @@ class Thesis {
           ? DateTime.parse(json['completed_date'] as String)
           : null,
       draftDocumentUrl: json['draft_document_url'] as String?,
-      finalDocumentUrl: RxString(json['final_document_url'] ?? ''),
+      finalDocumentUrl: json['final_document_url'] as String?,
       isProposalReady: json['is_proposal_ready'] as bool,
       isFinalExamReady: json['is_final_exam_ready'] as bool,
       student: User.fromJson(json['student'] as Map<String, dynamic>),
@@ -206,7 +218,7 @@ class Thesis {
       'submission_date': submissionDate.toIso8601String(),
       'completed_date': completionDate?.toIso8601String(),
       'draft_document_url': draftDocumentUrl,
-      'final_document_url': finalDocumentUrl?.value,
+      'final_document_url': finalDocumentUrl,
       'is_proposal_ready': isProposalReady,
       'is_final_exam_ready': isFinalExamReady,
       'student': student.toJson(),
@@ -230,7 +242,7 @@ class Thesis {
     DateTime? submissionDate,
     DateTime? completionDate,
     String? draftDocumentUrl,
-    RxString? finalDocumentUrl,
+    String? finalDocumentUrl,
     bool? isProposalReady,
     bool? isFinalExamReady,
     User? student,

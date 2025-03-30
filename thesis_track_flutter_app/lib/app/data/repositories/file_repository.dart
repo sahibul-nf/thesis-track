@@ -9,35 +9,9 @@ import 'package:thesis_track_flutter_app/app/core/failures.dart';
 class FileRepository {
   final ApiService _apiService = ApiService();
 
-  Future<Either<Failure, String>> uploadThesisDraft(
-      String thesisId, File file) async {
-    try {
-      final fileName = file.path.split('/').last;
-      final formData = dio.FormData.fromMap({
-        'document': await dio.MultipartFile.fromFile(
-          file.path,
-          filename: fileName,
-        ),
-      });
-
-      final response = await _apiService.post(
-        '/documents/thesis/$thesisId/draft',
-        data: formData,
-        options: dio.Options(
-          contentType: 'multipart/form-data',
-        ),
-      );
-
-      return Right(response.data['url'] as String);
-    } on dio.DioException catch (e) {
-      return Left(ServerFailure(e.message ?? 'Server error occurred'));
-    } catch (e) {
-      return Left(ServerFailure(e.toString()));
-    }
-  }
-
   Future<Either<Failure, String>> uploadThesisFinal(
-      String thesisId, dynamic file) async {
+      String thesisId, dynamic file,
+      {Function(int sent, int total)? onProgress}) async {
     try {
       // Generate boundary
       const boundary = '---011000010111000001101001';
@@ -84,6 +58,8 @@ class FileRepository {
           receiveTimeout: const Duration(seconds: 30),
           sendTimeout: const Duration(seconds: 30),
         ),
+        onSendProgress: onProgress,
+        onReceiveProgress: (sent, total) {},
       );
 
       if (response.statusCode == 200 || response.statusCode == 201) {
@@ -99,7 +75,7 @@ class FileRepository {
       );
     } on dio.DioException catch (e) {    
       return Left(ServerFailure(e.message ?? 'Server error occurred'));
-    } catch (e, stackTrace) {
+    } catch (e) {
       return Left(ServerFailure(e.toString()));
     }
   }
