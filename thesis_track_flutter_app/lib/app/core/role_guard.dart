@@ -221,7 +221,8 @@ class RoleGuard {
     if (mySupervisor == null) return false;
 
     // Check if current lecturer has already approved (either proposal or final)
-    if (mySupervisor.proposalDefenseApprovedAt != null ||
+    if (
+        // mySupervisor.proposalDefenseApprovedAt != null ||
         mySupervisor.finalDefenseApprovedAt != null) {
       return false;
     }
