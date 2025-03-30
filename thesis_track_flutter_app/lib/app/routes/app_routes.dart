@@ -10,6 +10,7 @@ import 'package:thesis_track_flutter_app/app/modules/auth/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/browse_thesis_screen.dart';
+import 'package:thesis_track_flutter_app/app/modules/thesis/screens/document_preview_screen.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/my_thesis_screen.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/screens.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/screens/top_progress_view.dart';
@@ -38,6 +39,7 @@ abstract class RouteLocation {
   // Admin Routes
   static const String userManagement = '/admin/users';
   static const String documents = '/admin/docs';
+  static const String documentPreview = 'documents/preview';
 
   /// Helper methods
   static String get toCreateThesis => '/$thesisCreate';
@@ -48,6 +50,8 @@ abstract class RouteLocation {
   static String toProgressList(String thesisId) => '$progress/thesis/$thesisId';
   static String toThesisDocuments(String thesisId) =>
       '$thesis/$thesisId/documents';
+  static String toDocumentPreview(String url) =>
+      '$myThesis/$documentPreview?url=$url';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -121,6 +125,35 @@ class AppRoutes {
                   );
                 },
               ),
+
+              // Document Preview Route
+              GoRoute(
+                parentNavigatorKey: _rootNavigatorKey,
+                path: RouteLocation.documentPreview,
+                name: 'document_preview',
+                pageBuilder: (context, state) {
+                  final url = state.uri.queryParameters['url'];
+                  if (url == null) {
+                    return RawDialogPage(
+                      barrierDismissible: true,
+                      barrierColor: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.1),
+                      child: const Center(
+                        child: Text('No URL provided'),
+                      ),
+                    );
+                  }
+
+                  return RawDialogPage(
+                    barrierDismissible: true,
+                    barrierColor:
+                        Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    child: DocumentPreviewScreen(url: url),
+                  );
+                },
+              ),
             ],
           ),
           GoRoute(
@@ -162,21 +195,13 @@ class AppRoutes {
               final thesis = state.extra as Thesis;
               return ProgressListScreen(thesis: thesis);
             },
-          ),
-
-          // Documents Route
-          GoRoute(
-            path: RouteLocation.thesisDocuments,
-            name: 'thesis_documents',
-            builder: (context, state) =>
-                ThesisDocumentsScreen(thesis: state.extra as Thesis),
-          ),
+          ),          
 
           // Documents Route
           GoRoute(
               path: RouteLocation.documents,
               name: 'documents_management',
-              builder: (context, state) => const DocumentsScreen()),
+              builder: (context, state) => const DocumentsScreen()),          
 
           // Admin Routes
           GoRoute(

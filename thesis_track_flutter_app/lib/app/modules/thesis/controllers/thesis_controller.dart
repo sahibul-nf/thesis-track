@@ -1,8 +1,10 @@
 import 'dart:developer';
+import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
+import 'package:thesis_track_flutter_app/app/data/repositories/file_repository.dart';
 import 'package:thesis_track_flutter_app/app/data/repositories/thesis_repository.dart';
 import 'package:thesis_track_flutter_app/app/modules/progress/controllers/progress_controller.dart';
 
@@ -113,14 +115,17 @@ class ThesisController extends GetxController {
   static ThesisController get to => Get.find();
 
   late final ThesisRepository _thesisRepository;
+  late final FileRepository _fileRepository;
   late final ProgressController _progressController;
 
   ThesisController({
     ProgressController? progressController,
     ThesisRepository? thesisRepository,
+    FileRepository? fileRepository,
   }) {
     _progressController = progressController ?? Get.find();
     _thesisRepository = thesisRepository ?? ThesisRepository();
+    _fileRepository = fileRepository ?? FileRepository();
   }
 
   final _allTheses = Rx<List<Thesis>>([]);
@@ -134,6 +139,7 @@ class ThesisController extends GetxController {
   final _isAssigningExaminer = false.obs;
   final _isAssigningSupervisor = false.obs;
   final _isFinalizingThesis = false.obs;
+  final _isMarkingAsCompleted = false.obs;
   final _topProgressTheses = <Thesis>[].obs;
   final _selectedYear = ''.obs;
   final _searchQuery = ''.obs;
@@ -150,6 +156,7 @@ class ThesisController extends GetxController {
   bool get isAssigningExaminer => _isAssigningExaminer.value;
   bool get isAssigningSupervisor => _isAssigningSupervisor.value;
   bool get isFinalizingThesis => _isFinalizingThesis.value;
+  bool get isMarkingAsCompleted => _isMarkingAsCompleted.value;
   String get selectedYear => _selectedYear.value;
   List<Thesis> get topProgressTheses => _topProgressTheses;
   int get topProgressThesesCount => _topProgressTheses.length;
@@ -383,11 +390,10 @@ class ThesisController extends GetxController {
 
   Future<String?> markAsCompleted(String thesisId) async {
     try {
-      _isLoadingMyThesis.value = true;
+      _isMarkingAsCompleted.value = true;
       final result = await _thesisRepository.markAsCompleted(thesisId);
       return result.fold(
         (failure) {
-          _error.value = failure.message;
           return failure.message;
         },
         (_) async {
@@ -396,7 +402,7 @@ class ThesisController extends GetxController {
         },
       );
     } finally {
-      _isLoadingMyThesis.value = false;
+      _isMarkingAsCompleted.value = false;
     }
   }
 

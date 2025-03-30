@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart' hide Progress;
 import 'package:iconsax/iconsax.dart';
+import 'package:thesis_track_flutter_app/app/core/role_guard.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
@@ -25,13 +26,17 @@ class ThesisDetailScreen extends StatefulWidget {
   State<ThesisDetailScreen> createState() => _ThesisDetailScreenState();
 }
 
-class _ThesisDetailScreenState extends State<ThesisDetailScreen> {
+class _ThesisDetailScreenState extends State<ThesisDetailScreen>
+    with TickerProviderStateMixin {
   final _thesisController = Get.find<ThesisController>();
   final _scrollController = ScrollController();
+  late final TabController _tabController;
 
   @override
   void initState() {
-    super.initState();    
+    super.initState(); 
+
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   Future<void> _loadThesis() async {
@@ -169,6 +174,7 @@ class _ThesisDetailScreenState extends State<ThesisDetailScreen> {
               pinned: true,
               delegate: _SliverAppBarDelegate(
                 tabBar: TabBar(
+                  controller: _tabController,
                   labelColor: theme.colorScheme.primary,
                   unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
                   indicatorColor: theme.colorScheme.primary,
@@ -190,9 +196,13 @@ class _ThesisDetailScreenState extends State<ThesisDetailScreen> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         spacing: AppTheme.spaceSM,
-                        children: const [
-                          Icon(Iconsax.document_text, size: 18),
-                          Text('Documents'),
+                        children: [
+                          Badge(
+                            isLabelVisible:
+                                RoleGuard.canUploadFinalDocument(thesis),
+                            child: const Icon(Iconsax.document_text, size: 18),
+                          ),
+                          const Text('Documents'),
                         ],
                       ),
                     ),
@@ -202,9 +212,11 @@ class _ThesisDetailScreenState extends State<ThesisDetailScreen> {
             ),
           ],
           body: TabBarView(
+            controller: _tabController,
             children: [
               ProgressSessionList(
                 thesis: thesis,
+                onTapUploadFinal: () => _tabController.animateTo(1),
               ),
               DocumentSection(thesis: thesis),
             ],

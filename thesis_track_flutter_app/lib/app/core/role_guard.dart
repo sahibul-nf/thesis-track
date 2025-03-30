@@ -60,16 +60,7 @@ class RoleGuard {
     if (user == null) return false;
 
     return role == UserRole.admin;
-  }
-
-  static bool canUploadDocuments() {
-    final user = getCurrentUser();
-    final role = user?.role;
-
-    if (user == null) return false;
-
-    return role == UserRole.student;
-  }
+  }  
 
   static bool canAddProgress() {
     final user = getCurrentUser();
@@ -386,6 +377,40 @@ class RoleGuard {
     // Check if has approved the thesis for finalization
     var isApproved = myFinalExaminer.finalizeApprovedAt != null;
     if (isApproved) return false;
+
+    return true;
+  }
+
+  static bool canUploadFinalDocument(Thesis thesis) {
+    final user = getCurrentUser();
+    if (user == null) return false;
+
+    final role = user.role;
+    if (role != UserRole.student) return false;
+
+    if (thesis.status != ThesisStatus.underReview) return false;
+
+    if (thesis.finalDocumentUrl != null &&
+        thesis.finalDocumentUrl!.isNotEmpty) {
+      return false;
+    }
+
+    return true;
+  }
+
+  static bool canUploadDraftDocument(Thesis thesis) {
+    final user = getCurrentUser();
+    if (user == null) return false;
+
+    final role = user.role;
+    if (role != UserRole.student) return false;
+
+    if (thesis.status != ThesisStatus.inProgress) return false;
+
+    if (thesis.draftDocumentUrl != null &&
+        thesis.draftDocumentUrl!.isNotEmpty) {
+      return false;
+    }
 
     return true;
   }

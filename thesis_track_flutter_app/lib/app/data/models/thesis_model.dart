@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart' show Colors, Color;
 import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/data/models/progress_model.dart';
@@ -83,6 +85,16 @@ class Thesis {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  /// Final Document URL
+  RxString get finalDocumentUrlRx {
+    return RxString(finalDocumentUrl ?? '');
+  }
+
+  setFinalDocumentUrlRx(String value) {
+    finalDocumentUrlRx.value = value;
+    log('finalDocumentUrlRx: $finalDocumentUrlRx');
+  }
 
   /// Progresses
   var progresses = RxList<ProgressModel>([]);

@@ -1,16 +1,44 @@
-import 'dart:io';
+import 'dart:math';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:get/get.dart';
+import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/repositories/file_repository.dart';
 
 class FileController extends GetxController {
+  static FileController get to => Get.find();
+  
   final FileRepository _fileRepository = FileRepository();
   final _isLoading = false.obs;
-  final _error = Rxn<String>();
+  final _uploadProgress = 0.0.obs; // Progress upload dari 0.0 sampai 100.0
+  final _bytesSent = 0.obs; // Tambahkan ini
+  final _totalBytes = 0.obs; // Tambahkan ini
+  final _isUploading = false.obs; // Tambahkan state baru untuk tracking upload
+  final _isProcessing =
+      false.obs; // Tambahkan state baru untuk tracking proses server
 
   bool get isLoading => _isLoading.value;
-  String? get error => _error.value;
+  double get uploadProgress => _uploadProgress.value;
+  int get bytesSent => _bytesSent.value; // Getter untuk bytes terkirim
+  int get totalBytes => _totalBytes.value; // Getter untuk total bytes
+  bool get isUploading => _isUploading.value;
+  bool get isProcessing => _isProcessing.value;
+
+  // Untuk memperbarui progress
+  void updateProgress(int sent, int total) {
+    _bytesSent.value = sent;
+    _totalBytes.value = total;
+    if (total > 0) {
+      _uploadProgress.value = (sent / total) * 100;
+    }
+  }
+
+  // Reset progress saat selesai
+  void resetProgress() {
+    _uploadProgress.value = 0.0;
+    _bytesSent.value = 0;
+    _totalBytes.value = 0;
+  }
 
   Future<FilePickerResult?> pickFile({
     FileType type = FileType.any,
@@ -22,66 +50,50 @@ class FileController extends GetxController {
     );
   }
 
-  Future<String?> uploadThesisDraft(String thesisId, File file) async {
+  Future<String?> uploadThesisFinal(Thesis thesis, dynamic file) async {
     try {
       _isLoading.value = true;
-      _error.value = null;
-      final result = await _fileRepository.uploadThesisDraft(thesisId, file);
-      return result.fold(
-        (failure) {
-          _error.value = failure.message;
-          return failure.message;
-        },
-        (url) => url,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
+      _isUploading.value = true;
+      resetProgress();
 
-  Future<String?> uploadThesisFinal(String thesisId, File file) async {
-    try {
-      _isLoading.value = true;
-      _error.value = null;
-      final result = await _fileRepository.uploadThesisFinal(thesisId, file);
+      final result = await _fileRepository.uploadThesisFinal(
+        thesis.id,
+        file,
+        onProgress: (sent, total) {
+          if (total != 0) {
+            final progress = (sent / total) * 100;
+            updateProgress(sent, total);
+            if (progress >= 100) {
+              _isUploading.value = false;
+              _isProcessing.value = true; // Mulai proses server
+            }
+          }
+        },
+      );
+      
       return result.fold(
         (failure) {
-          _error.value = failure.message;
           return failure.message;
         },
-        (url) => url,
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<String?> uploadProgressDocument(String progressId, File file) async {
-    try {
-      _isLoading.value = true;
-      _error.value = null;
-      final result =
-          await _fileRepository.uploadProgressDocument(progressId, file);
-      return result.fold(
-        (failure) {
-          _error.value = failure.message;
-          return failure.message;
+        (url) {
+          thesis.setFinalDocumentUrlRx(url);
+          return null;
         },
-        (url) => url,
       );
     } finally {
+      _isUploading.value = false;
+      _isProcessing.value = false;
       _isLoading.value = false;
+      resetProgress();
     }
   }
 
   Future<String?> deleteDocument(String url) async {
     try {
       _isLoading.value = true;
-      _error.value = null;
       final result = await _fileRepository.deleteDocument(url);
       return result.fold(
         (failure) {
-          _error.value = failure.message;
           return failure.message;
         },
         (_) => null,
@@ -89,5 +101,12 @@ class FileController extends GetxController {
     } finally {
       _isLoading.value = false;
     }
+  }
+
+  String formatBytes(int bytes, {int decimals = 1}) {
+    if (bytes <= 0) return '0 B';
+    const suffixes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    var i = (log(bytes) / log(1024)).floor();
+    return '${(bytes / pow(1024, i)).toStringAsFixed(decimals)} ${suffixes[i]}';
   }
 }

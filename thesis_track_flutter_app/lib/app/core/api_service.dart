@@ -1,14 +1,15 @@
 import 'package:dio/dio.dart' as d;
 import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
 import 'package:pretty_dio_logger/pretty_dio_logger.dart';
 import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
+import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 
 class ApiConfig {
   static const String _apiBaseUrl =
       'https://thesis-track-production.up.railway.app/api/v1';
   static const String _apiBaseUrlDev = 'http://localhost:8080/api/v1';
-  static const String apiTimeout = '15000';
+  static const String apiSendTimeout = '15000';
+  static const String apiReceiveTimeout = '30000';
 
   static String get apiBaseUrl => kDebugMode ? _apiBaseUrlDev : _apiBaseUrl;
 }
@@ -27,14 +28,14 @@ class ApiService {
         baseUrl: ApiConfig.apiBaseUrl,
         connectTimeout: Duration(
           milliseconds: int.parse(
-            ApiConfig.apiTimeout,
+            ApiConfig.apiSendTimeout,
           ),
         ),
-        receiveTimeout: Duration(
-          milliseconds: int.parse(
-            ApiConfig.apiTimeout,
-          ),
-        ),
+        // receiveTimeout: Duration(
+        //   milliseconds: int.parse(
+        //     ApiConfig.apiReceiveTimeout,
+        //   ),
+        // ),
         headers: {'Content-Type': 'application/json'},
       ),
     );
@@ -64,8 +65,7 @@ class ApiService {
         onError: (d.DioException e, handler) {
           if (e.response?.statusCode == 401) {
             // Handle token expiration
-            StorageService.clearAuthData();
-            Get.offAllNamed('/login');
+            AuthController.to.logout();
           }
           return handler.next(e);
         },
@@ -94,6 +94,8 @@ class ApiService {
     dynamic data,
     Map<String, dynamic>? queryParameters,
     d.Options? options,
+    Function(int sent, int total)? onSendProgress,
+    Function(int sent, int total)? onReceiveProgress,
   }) async {
     try {
       return await dio.post(
@@ -101,6 +103,8 @@ class ApiService {
         data: data,
         queryParameters: queryParameters,
         options: options,
+        onSendProgress: onSendProgress,
+        onReceiveProgress: onReceiveProgress,
       );
     } on d.DioException catch (e) {
       throw _handleError(e);
