@@ -34,6 +34,9 @@ func NewServer(
 ) *Server {
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
+		AppName: "Thesis Track API",
+		BodyLimit: 10 * 1024 * 1024, // 10MB
+		CaseSensitive: true,
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
 			if e, ok := err.(*fiber.Error); ok {
@@ -49,9 +52,9 @@ func NewServer(
 	app.Use(logger.New())
 	app.Use(recover.New())
 	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
+		AllowOrigins: "http://localhost:5000, https://thesis-track.codemagic.app",
 		AllowHeaders: "Origin, Content-Type, Accept, Authorization",
-		AllowMethods: "GET, POST, PUT, DELETE",
+		AllowMethods: "GET, POST, PUT, DELETE, OPTIONS",
 	}))
 
 	// Create auth middleware
