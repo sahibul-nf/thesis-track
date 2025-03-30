@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as sha;
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/controllers/admin_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/widgets/metric_card.dart';
@@ -375,6 +376,53 @@ class HomeAdminView extends StatelessWidget {
             ],
           );
         }),
+        // Quick Stats Grid
+        SizedBox(height: AppTheme.spaceSM),
+        Obx(() {
+          return Row(
+            spacing: AppTheme.spaceLG,
+            children: [
+              Expanded(
+                child: _buildQuickStatCard(
+                  context,
+                  icon: Iconsax.timer_1,
+                  title: 'Avg. Completion',
+                  subtitle: 'Average time taken to complete a thesis',
+                  value: adminC.formattedAvgCompletionTime,
+                  trend: adminC.completionTimeTrend,
+                  trendUp: !adminC.completionTimeTrend.startsWith('+'),
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+              // On Track Projects Health
+              Expanded(
+                child: _buildQuickStatCard(
+                  context,
+                  icon: Iconsax.heart_circle,
+                  title: 'Project Health',
+                  subtitle: 'The health of theses (updated in last 14 days)',
+                  value: adminC.formattedProjectHealth,
+                  trend: adminC.projectHealthTrend,
+                  trendUp: adminC.projectHealthTrend.startsWith('+'),
+                  color: theme.colorScheme.secondary,
+                ),
+              ),
+              // Success Rate
+              Expanded(
+                child: _buildQuickStatCard(
+                  context,
+                  icon: Iconsax.task_square,
+                  title: 'Success Rate',
+                  subtitle: 'Success rate of all projects',
+                  value: adminC.formattedSuccessRate,
+                  trend: adminC.successRateTrend,
+                  trendUp: adminC.successRateTrend.startsWith('+'),
+                  color: theme.colorScheme.tertiary,
+                ),
+              ),
+            ],
+          );
+        }),
         // Recent Activities Section
         SizedBox(height: AppTheme.spaceSM),
         ThesisCard(
@@ -427,148 +475,116 @@ class HomeAdminView extends StatelessWidget {
               SizedBox(height: AppTheme.spaceMD),
 
               // Activity Timeline
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: adminC.recentOnTrackTheses.take(3).length,
-                separatorBuilder: (context, index) =>
-                    SizedBox(height: AppTheme.spaceSM),
-                itemBuilder: (context, index) {
-                  final thesis = adminC.recentOnTrackTheses[index];
-                  return InkWell(
-                    onTap: () => context.go('/thesis/${thesis.id}'),
-                    borderRadius: BorderRadius.circular(AppTheme.buttonRadius),
-                    child: Container(
-                      padding: EdgeInsets.all(AppTheme.spaceMD),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.buttonRadius),
-                        border: Border.all(
-                          color: theme.colorScheme.outline.withOpacity(0.1),
+              Obx(() {
+                var data = thesisC.isLoadingAllTheses
+                    ? mockOtherTheses
+                    : adminC.recentOnTrackTheses.take(3).toList();
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: data.length,
+                  separatorBuilder: (context, index) =>
+                      SizedBox(height: AppTheme.spaceSM),
+                  itemBuilder: (context, index) {
+                    final thesis = data[index];
+                    return InkWell(
+                      onTap: () => context.go('/thesis/${thesis.id}'),
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.buttonRadius),
+                      child: Container(
+                        padding: EdgeInsets.all(AppTheme.spaceMD),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface,
+                          borderRadius:
+                              BorderRadius.circular(AppTheme.buttonRadius),
+                          border: Border.all(
+                            color: theme.colorScheme.outline.withOpacity(0.1),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            // Activity Icon
+                            Container(
+                              padding: EdgeInsets.all(AppTheme.spaceSM),
+                              decoration: BoxDecoration(
+                                color: _getActivityColor(thesis.status.name)
+                                    .withOpacity(0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                _getActivityIcon(thesis.status.name),
+                                size: 18,
+                                color: _getActivityColor(thesis.status.name),
+                              ),
+                            ),
+                            SizedBox(width: AppTheme.spaceMD),
+
+                            // Activity Details
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        thesis.student.name,
+                                        style: theme.textTheme.bodyMedium
+                                            ?.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      Text(
+                                        ' • ',
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          color: theme
+                                              .colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                      Text(
+                                        thesis.status.name,
+                                        style:
+                                            theme.textTheme.bodySmall?.copyWith(
+                                          color: _getActivityColor(
+                                              thesis.status.name),
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    thesis.title,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color: theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            // Timestamp
+                            Text(
+                              timeago.format(thesis.updatedAt),
+                              style: theme.textTheme.labelSmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant
+                                    .withOpacity(0.7),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        children: [
-                          // Activity Icon
-                          Container(
-                            padding: EdgeInsets.all(AppTheme.spaceSM),
-                            decoration: BoxDecoration(
-                              color: _getActivityColor(thesis.status.name)
-                                  .withOpacity(0.1),
-                              shape: BoxShape.circle,
-                            ),
-                            child: Icon(
-                              _getActivityIcon(thesis.status.name),
-                              size: 18,
-                              color: _getActivityColor(thesis.status.name),
-                            ),
-                          ),
-                          SizedBox(width: AppTheme.spaceMD),
-
-                          // Activity Details
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Text(
-                                      thesis.student.name,
-                                      style:
-                                          theme.textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    Text(
-                                      ' • ',
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color:
-                                            theme.colorScheme.onSurfaceVariant,
-                                      ),
-                                    ),
-                                    Text(
-                                      thesis.status.name,
-                                      style:
-                                          theme.textTheme.bodySmall?.copyWith(
-                                        color: _getActivityColor(
-                                            thesis.status.name),
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  thesis.title,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurfaceVariant,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          // Timestamp
-                          Text(
-                            timeago.format(thesis.updatedAt),
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant
-                                  .withOpacity(0.7),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ).asSkeleton(
+                  enabled: thesisC.isLoadingAllTheses,
+                );
+              })
             ],
           ),
-        ),
-
-        // Quick Stats Grid
-        SizedBox(height: AppTheme.spaceSM),
-        Row(
-          spacing: AppTheme.spaceLG,
-          children: [
-            Expanded(
-              child: _buildQuickStatCard(
-                context,
-                icon: Iconsax.timer_1,
-                title: 'Avg. Completion',
-                value: '${adminC.avgCompletionTime} months',
-                trend: '+2.1%',
-                trendUp: true,
-                color: theme.colorScheme.primary,
-              ),
-            ),
-            Expanded(
-              child: _buildQuickStatCard(
-                context,
-                icon: Iconsax.teacher,
-                title: 'Active Supervisors',
-                value: '${adminC.totalLecturers}',
-                trend: '+5.8%',
-                trendUp: true,
-                color: theme.colorScheme.secondary,
-              ),
-            ),
-            Expanded(
-              child: _buildQuickStatCard(
-                context,
-                icon: Iconsax.task_square,
-                title: 'Success Rate',
-                value: '${(adminC.successRate * 100).toPrecision(1)}%',
-                trend: '+12.3%',
-                trendUp: true,
-                color: theme.colorScheme.tertiary,
-              ),
-            ),
-          ],
         ),
       ],
     );
@@ -579,6 +595,7 @@ class HomeAdminView extends StatelessWidget {
     BuildContext context, {
     required IconData icon,
     required String title,
+    required String subtitle,
     required String value,
     required String trend,
     required bool trendUp,
@@ -591,13 +608,24 @@ class HomeAdminView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.all(AppTheme.spaceSM),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppTheme.chipRadius),
-            ),
-            child: Icon(icon, size: 20, color: color),
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(AppTheme.spaceSM),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(AppTheme.chipRadius),
+                ),
+                child: Icon(icon, size: 20, color: color),
+              ),
+              SizedBox(width: AppTheme.spaceMD),
+              Text(
+                title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           SizedBox(height: AppTheme.spaceMD),
           Text(
@@ -608,7 +636,7 @@ class HomeAdminView extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            title,
+            subtitle,
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -631,7 +659,7 @@ class HomeAdminView extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
-                    trendUp ? Iconsax.arrow_up_1 : Iconsax.arrow_down_1,
+                    trendUp ? Iconsax.arrow_up_1 : Iconsax.arrow_down_2,
                     size: 12,
                     color: trendUp
                         ? theme.colorScheme.onPrimaryContainer

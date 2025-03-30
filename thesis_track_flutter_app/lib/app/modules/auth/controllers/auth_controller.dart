@@ -2,6 +2,8 @@ import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/core/storage_service.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/data/repositories/auth_repository.dart';
+import 'package:thesis_track_flutter_app/app/modules/file/controllers/file_controller.dart';
+import 'package:thesis_track_flutter_app/app/modules/home/controllers/admin_controller.dart';
 
 import '../../progress/controllers/progress_controller.dart';
 import '../../thesis/controllers/thesis_controller.dart';
@@ -14,7 +16,7 @@ class AuthController extends GetxController {
   final _isLoading = false.obs;
 
   User? get user => _user.value;
-  bool get isLoading => _isLoading.value;  
+  bool get isLoading => _isLoading.value;
 
   @override
   void onInit() {
@@ -24,7 +26,7 @@ class AuthController extends GetxController {
     if (userData != null) {
       _user.value = userData;
     }
-  }  
+  }
 
   Future<String?> login(String email, String password) async {
     try {
@@ -92,7 +94,9 @@ class AuthController extends GetxController {
       // Delete all controllers
       Get.delete<ThesisController>();
       Get.delete<ProgressController>();
-
+      Get.delete<FileController>();
+      Get.delete<AdminController>();
+      
       return null;
     } catch (e) {
       return e.toString();
@@ -121,7 +125,7 @@ class AuthController extends GetxController {
     } catch (e) {
       return e.toString();
     }
-  }  
+  }
 
   Future<String?> getStudent(String id) async {
     try {
