@@ -208,7 +208,21 @@ class HomeStudentView extends StatelessWidget {
                     ],
                   ),
                   SizedBox(height: AppTheme.spaceMD),
-                  if (progresses.isEmpty)
+                  if (progresses.isEmpty &&
+                      thesis?.status == ThesisStatus.pending)
+                    EmptyStateWidget(
+                      title: 'No progress yet',
+                      message: 'Your thesis is pending approval from the admin',
+                      icon: Iconsax.document_text,
+                      actionLabel: 'View Thesis',
+                      onAction: () => context.go(
+                        RouteLocation.toThesisDetail(thesis!.id),
+                        extra: thesis,
+                      ),
+                      buttonSize: Size(120, AppTheme.buttonSmall),
+                      actionIcon: Iconsax.arrow_right_3,
+                    )
+                  else if (progresses.isEmpty)
                     EmptyStateWidget(
                       title: 'No progress yet',
                       message:

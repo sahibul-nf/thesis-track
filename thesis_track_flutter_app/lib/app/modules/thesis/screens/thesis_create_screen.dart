@@ -8,6 +8,7 @@ import 'package:thesis_track_flutter_app/app/modules/home/controllers/admin_cont
 import 'package:thesis_track_flutter_app/app/modules/thesis/controllers/thesis_controller.dart';
 import 'package:thesis_track_flutter_app/app/theme/app_theme.dart';
 import 'package:thesis_track_flutter_app/app/widgets/text_field.dart';
+import 'package:thesis_track_flutter_app/app/widgets/toast.dart';
 
 class ThesisCreateScreen extends StatefulWidget {
   const ThesisCreateScreen({super.key});
@@ -39,18 +40,27 @@ class _ThesisCreateScreenState extends State<ThesisCreateScreen> {
   }
 
   Future<void> _submit() async {
-    if (_formKey.currentState!.validate()) {
-      await _thesisController.createThesis(
-        title: _titleController.text,
-        abstract: _abstractController.text,
-        researchField: _researchFieldController.text,
-        supervisorId: _selectedSupervisor.value?.id ?? '',
-      );
+    if (!_formKey.currentState!.validate()) return;
+    String? error = await _thesisController.createThesis(
+      title: _titleController.text,
+      abstract: _abstractController.text,
+      researchField: _researchFieldController.text,
+      supervisorId: _selectedSupervisor.value?.id ?? '',
+    );
 
-      if (context.mounted) {
-        context.go('/');
-      }
+    if (error != null) {
+      MyToast.showShadcnUIToast(
+        // ignore: use_build_context_synchronously
+        context,
+        'Failed to create thesis',
+        error,
+        isError: true,
+      );
+      return;
     }
+
+    // ignore: use_build_context_synchronously
+    context.pop();
   }
 
   @override
