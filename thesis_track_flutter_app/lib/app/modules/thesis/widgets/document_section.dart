@@ -311,7 +311,10 @@ class _DocumentSectionState extends State<DocumentSection> {
   }
 
   void _previewDocument(String url) {
-    context.go(RouteLocation.toDocumentPreview(url));
+    context.go(
+      RouteLocation.toDocumentPreview(url: url, thesisId: widget.thesis.id),
+      extra: widget.thesis,
+    );
   }
 }
 

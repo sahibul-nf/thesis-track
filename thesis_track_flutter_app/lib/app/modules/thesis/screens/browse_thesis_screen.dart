@@ -14,7 +14,8 @@ import 'package:thesis_track_flutter_app/app/widgets/empty_state.dart';
 import 'package:thesis_track_flutter_app/app/widgets/popup_menu.dart';
 
 class BrowseThesisScreen extends StatefulWidget {
-  const BrowseThesisScreen({super.key});
+  const BrowseThesisScreen({super.key, this.status});
+  final List<String>? status;
 
   @override
   State<BrowseThesisScreen> createState() => _BrowseThesisScreenState();
@@ -24,6 +25,15 @@ class _BrowseThesisScreenState extends State<BrowseThesisScreen> {
   final searchController = TextEditingController();
   final controller = ThesisController.to;
   final statusMenuController = MenuController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.status != null) {
+      controller.updateStatusFilter(
+          widget.status!.map((e) => ThesisStatus.fromString(e)).toList());
+    }
+  }
 
   String _getScreenTitle(UserRole role) {
     switch (role) {
@@ -192,7 +202,11 @@ class _BrowseThesisScreenState extends State<BrowseThesisScreen> {
                             );
                           },
                           label: Text(
-                            controller.selectedStatus.value?.name ?? 'All',
+                            controller.selectedStatus.value.isEmpty
+                                ? 'All'
+                                : controller.selectedStatus.value
+                                    .map((e) => e.name)
+                                    .join(', '),
                             style: theme.textTheme.labelLarge,
                           ),
                           iconAlignment: IconAlignment.end,
@@ -217,7 +231,7 @@ class _BrowseThesisScreenState extends State<BrowseThesisScreen> {
                               CustomMenuItem(
                                 title: 'All',
                                 onTap: () {
-                                  controller.updateStatusFilter(null);
+                                  controller.updateStatusFilter([]);
                                   statusMenuController.close();
                                 },
                               ),
@@ -225,7 +239,7 @@ class _BrowseThesisScreenState extends State<BrowseThesisScreen> {
                                     (status) => CustomMenuItem(
                                       title: status.name,
                                       onTap: () {
-                                        controller.updateStatusFilter(status);
+                                        controller.updateStatusFilter([status]);
                                         statusMenuController.close();
                                       },
                                     ),
@@ -242,21 +256,22 @@ class _BrowseThesisScreenState extends State<BrowseThesisScreen> {
               Obx(() {
                 final resultCount = controller.filteredTheses.length;
                 if (controller.searchQuery.isNotEmpty ||
-                    controller.selectedStatus.value != null) {
+                    controller.selectedStatus.value.isNotEmpty) {
                   return Row(
                     children: [
                       Text(
                         'Found $resultCount ${resultCount == 1 ? 'thesis' : 'theses'}',
                         style: theme.textTheme.bodySmall,
                       ),
-                      if (controller.selectedStatus.value != null) ...[
+                      if (controller.selectedStatus.value.isNotEmpty) ...[
                         Text(
                           ' with status ',
                           style: theme.textTheme.bodySmall,
                         ),
                         ThesisStatusChip(
-                          status: controller.selectedStatus.value?.name ??
-                              'All',
+                          status: controller.selectedStatus.value
+                              .map((e) => e.name)
+                              .join(', '),
                         ),
                       ],
                     ],
@@ -273,14 +288,17 @@ class _BrowseThesisScreenState extends State<BrowseThesisScreen> {
 
             if (theses.isEmpty && !controller.isLoadingAllTheses) {
               return _getEmptyStateContent(
-                  userRole, context, controller.searchQuery);
-      }
+                userRole,
+                context,
+                controller.searchQuery,
+              );
+            }
 
-      if (controller.isLoadingAllTheses) {
-        return ThesisListView(theses: mockOtherTheses).asSkeleton();
-      }
+            if (controller.isLoadingAllTheses) {
+              return ThesisListView(theses: mockOtherTheses).asSkeleton();
+            }
 
-      return ThesisListView(theses: theses);
+            return ThesisListView(theses: theses);
           }),
         ),
       ],

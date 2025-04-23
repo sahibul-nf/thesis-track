@@ -1,5 +1,4 @@
 import 'dart:developer';
-import 'dart:io';
 
 import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
@@ -143,7 +142,7 @@ class ThesisController extends GetxController {
   final _topProgressTheses = <Thesis>[].obs;
   final _selectedYear = ''.obs;
   final _searchQuery = ''.obs;
-  final selectedStatus = Rxn<ThesisStatus>();
+  final selectedStatus = Rx<List<ThesisStatus>>([]);
 
   List<Thesis> get allTheses => _allTheses.value;
   List<Thesis> get myTheses => _myTheses.value;
@@ -178,9 +177,9 @@ class ThesisController extends GetxController {
     }
 
     // Apply status filter
-    if (selectedStatus.value != null) {
+    if (selectedStatus.value.isNotEmpty) {
       filtered = filtered.where((thesis) {
-        return thesis.status == selectedStatus.value;
+        return selectedStatus.value.contains(thesis.status);
       }).toList();
     }
 
@@ -471,7 +470,7 @@ class ThesisController extends GetxController {
     _searchQuery.value = query;
   }
 
-  void updateStatusFilter(ThesisStatus? status) {
+  void updateStatusFilter(List<ThesisStatus> status) {
     selectedStatus.value = status;
   }
 }

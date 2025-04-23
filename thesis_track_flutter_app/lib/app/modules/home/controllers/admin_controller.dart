@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
@@ -51,6 +50,16 @@ class AdminController extends GetxController {
         .where((thesis) => thesis.status != ThesisStatus.completed)
         .toList()
       ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+  }
+
+  List<Thesis> get pendingActionTheses {
+    return _thesisController.myTheses
+        .where((thesis) =>
+            thesis.status == ThesisStatus.pending ||
+            (thesis.status == ThesisStatus.underReview &&
+                thesis.finalDocumentUrlRx.isNotEmpty))
+        .toList()
+      ..sort((a, b) => a.updatedAt.compareTo(b.updatedAt));
   }
 
   // -- Avg Completion Time in months --

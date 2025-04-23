@@ -3,13 +3,16 @@ import 'package:get/get.dart';
 import 'package:go_router/go_router.dart';
 import 'package:iconsax/iconsax.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as sha;
+import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
 import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/controllers/admin_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/widgets/metric_card.dart';
 import 'package:thesis_track_flutter_app/app/modules/home/widgets/top_progress_card.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/controllers/thesis_controller.dart';
+import 'package:thesis_track_flutter_app/app/routes/app_routes.dart';
 import 'package:thesis_track_flutter_app/app/theme/app_theme.dart';
 import 'package:thesis_track_flutter_app/app/widgets/card.dart';
+import 'package:thesis_track_flutter_app/app/widgets/empty_state.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 class HomeAdminView extends StatelessWidget {
@@ -423,7 +426,7 @@ class HomeAdminView extends StatelessWidget {
             ],
           );
         }),
-        // Recent Activities Section
+        // Recent Pending Actions
         SizedBox(height: AppTheme.spaceSM),
         ThesisCard(
           padding: EdgeInsets.all(AppTheme.spaceMD),
@@ -443,14 +446,14 @@ class HomeAdminView extends StatelessWidget {
                               BorderRadius.circular(AppTheme.chipRadius),
                         ),
                         child: Icon(
-                          Iconsax.activity,
+                          Iconsax.clipboard,
                           size: 20,
                           color: theme.colorScheme.primary,
                         ),
                       ),
                       SizedBox(width: AppTheme.spaceMD),
                       Text(
-                        'Recent Activities',
+                        'Pending Actions',
                         style: theme.textTheme.titleSmall?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
@@ -458,7 +461,10 @@ class HomeAdminView extends StatelessWidget {
                     ],
                   ),
                   TextButton.icon(
-                    onPressed: () => context.go('/thesis'),
+                    onPressed: () => context.go(
+                      RouteLocation.thesis,
+                      extra: [ThesisStatus.pending, ThesisStatus.underReview],
+                    ),
                     icon: const Icon(
                       Iconsax.arrow_right_3,
                       size: 16,
@@ -474,11 +480,23 @@ class HomeAdminView extends StatelessWidget {
               ),
               SizedBox(height: AppTheme.spaceMD),
 
-              // Activity Timeline
+              // Pending Actions
               Obx(() {
                 var data = thesisC.isLoadingAllTheses
                     ? mockOtherTheses
-                    : adminC.recentOnTrackTheses.take(3).toList();
+                    : adminC.pendingActionTheses.take(3).toList();
+
+                if (data.isEmpty) {
+                  return EmptyStateWidget(
+                    title: 'No pending actions',
+                    message: 'There are no pending actions',
+                    icon: Iconsax.document_text,
+                    onAction: () => context.go(RouteLocation.thesis),
+                    buttonSize: Size(120, AppTheme.buttonSmall),
+                    actionLabel: 'View Thesis',
+                    actionIcon: Iconsax.arrow_right_3,
+                  );
+                }
 
                 return ListView.separated(
                   shrinkWrap: true,
@@ -489,7 +507,10 @@ class HomeAdminView extends StatelessWidget {
                   itemBuilder: (context, index) {
                     final thesis = data[index];
                     return InkWell(
-                      onTap: () => context.go('/thesis/${thesis.id}'),
+                      onTap: () => context.go(
+                        RouteLocation.thesisDetail,
+                        extra: thesis,
+                      ),
                       borderRadius:
                           BorderRadius.circular(AppTheme.buttonRadius),
                       child: Container(

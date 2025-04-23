@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:thesis_track_flutter_app/app/core/route_guard.dart';
@@ -50,8 +52,9 @@ abstract class RouteLocation {
   static String toProgressList(String thesisId) => '$progress/thesis/$thesisId';
   static String toThesisDocuments(String thesisId) =>
       '$thesis/$thesisId/documents';
-  static String toDocumentPreview(String url) =>
-      '$myThesis/$documentPreview?url=$url';
+  static String toDocumentPreview(
+          {required String url, required String thesisId}) =>
+      '$thesis/$thesisId/$documentPreview?url=$url';
 }
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -59,6 +62,7 @@ final _shellNavigatorKey = GlobalKey<NavigatorState>();
 
 class AppRoutes {
   static final router = GoRouter(
+    debugLogDiagnostics: true,
     navigatorKey: _rootNavigatorKey,
     initialLocation: RouteLocation.home,
     redirect: RouteGuard.handle,
@@ -126,6 +130,33 @@ class AppRoutes {
                 },
               ),
 
+              
+            ],
+          ),
+          GoRoute(
+            path: RouteLocation.thesis,
+            name: 'browse_theses',
+            builder: (context, state) {
+              final status = state.extra as List<ThesisStatus>?;
+              log(status.toString());
+              return BrowseThesisScreen(
+                status: status?.map((e) => e.name).toList(),
+              );
+            },
+          ),
+          GoRoute(
+            path: RouteLocation.thesisDetail,
+            name: 'thesis_detail',
+            builder: (context, state) {
+              var thesis = state.extra as Thesis?;
+              if (thesis == null) {
+                return const Center(
+                  child: Text('Thesis not found'),
+                );
+              }
+              return ThesisDetailScreen(thesis: thesis);
+            },
+            routes: [
               // Document Preview Route
               GoRoute(
                 parentNavigatorKey: _rootNavigatorKey,
@@ -155,24 +186,6 @@ class AppRoutes {
                 },
               ),
             ],
-          ),
-          GoRoute(
-            path: RouteLocation.thesis,
-            name: 'browse_theses',
-            builder: (context, state) => const BrowseThesisScreen(),
-          ),
-          GoRoute(
-            path: RouteLocation.thesisDetail,
-            name: 'thesis_detail',
-            builder: (context, state) {
-              final thesis = state.extra as Thesis?;
-              if (thesis == null) {
-                return const Center(
-                  child: Text('Thesis not found'),
-                );
-              }
-              return ThesisDetailScreen(thesis: thesis);
-            },
           ),     
           GoRoute(
             path: RouteLocation.topProgress,
