@@ -182,7 +182,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             },
                             leading: const Icon(Iconsax.edit, size: 18),
                             title: 'Edit',
-                          ),
+                          ),                        
                         if (RoleGuard.canAssignSupervisor(widget.thesis))
                           CustomMenuItem(
                             onTap: () {
@@ -250,14 +250,6 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             leading: const Icon(Iconsax.tick_circle, size: 18),
                             title: 'Approve Final Defense',
                           ),
-
-                        if (RoleGuard.canAcceptThesisSubmission(widget.thesis))
-                          CustomMenuItem(
-                            onTap: _showAcceptThesisDialog,
-                            leading: const Icon(Iconsax.tick_circle, size: 18),
-                            title: 'Accept Submission',
-                          ),
-
                         if (RoleGuard.canApproveThesisForFinalization(
                             widget.thesis))
                           CustomMenuItem(
@@ -266,12 +258,29 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             title: 'Finalize Thesis',
                           ),
 
+                        // -- Admin Only --
+                        if (RoleGuard.canAcceptThesisSubmission(
+                            widget.thesis)) ...[
+                          // Accept Submission
+                          CustomMenuItem(
+                            onTap: _showAcceptThesisDialog,
+                            leading: const Icon(Iconsax.tick_circle, size: 18),
+                            title: 'Accept Submission',
+                          ),
+                          // Reject Submission
+                          CustomMenuItem(
+                            onTap: _showRejectThesisDialog,
+                            leading: const Icon(Iconsax.close_circle, size: 18),
+                            title: 'Reject Submission',
+                          ),
+                        ],
                         if (RoleGuard.canMarkAsCompleted(widget.thesis))
                           CustomMenuItem(
                             onTap: _markAsCompleted,
                             leading: const Icon(Iconsax.task_square, size: 18),
                             title: 'Mark as Completed',
                           ),
+                        // -- End of Admin Only --
 
                         // Delete Thesis
                         if (RoleGuard.canDeleteThesis(widget.thesis.studentId))
@@ -378,28 +387,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 spacing: AppTheme.spaceSM,
-                children: [
-                  if (canAccept)
-                    FilledButton(
-                      onPressed: thesisC.isAssigningSupervisor
-                          ? null
-                          : () {
-                              _showAcceptThesisDialog();
-                            },
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size(100, 44),
-                      ),
-                      child: thesisC.isAssigningSupervisor
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                strokeCap: StrokeCap.round,
-                              ),
-                            )
-                          : const Text('Accept Submission'),
-                    ),
+                children: [                  
                   if (canAssignSupervisor)
                     if (canAssignProposalDefenseExaminer)
                       FilledButton(
@@ -544,7 +532,56 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             )
                           : const Text('Finalize Thesis'),
                     ),
-                  if (canMarkAsCompleted)
+
+                  // -- Admin Only --
+                  if (canAccept) ...[
+                    // Reject Submission
+                    FilledButton(
+                      // onPressed: thesisC.isRejectingThesis
+                      //     ? null
+                      //     : () => _showRejectThesisDialog(),
+                      onPressed: () => _showRejectThesisDialog(),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(100, 44),
+                        backgroundColor: theme.colorScheme.errorContainer,
+                        foregroundColor: theme.colorScheme.onErrorContainer,
+                      ),
+                      // child: thesisC.isRejectingThesis
+                      //     ? const SizedBox(
+                      //         width: 20,
+                      //         height: 20,
+                      //         child: CircularProgressIndicator(
+                      //           strokeWidth: 2,
+                      //           strokeCap: StrokeCap.round,
+                      //         ),
+                      //       )
+                      //     :
+                      child: const Text('Reject'),
+                    ),
+                    // Accept Submission
+                    FilledButton(
+                      onPressed: thesisC.isAssigningSupervisor
+                          ? null
+                          : () {
+                              _showAcceptThesisDialog();
+                            },
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size(100, 44),
+                      ),
+                      child: thesisC.isAssigningSupervisor
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                strokeCap: StrokeCap.round,
+                              ),
+                            )
+                          : const Text('Accept Submission'),
+                    ),
+                  ],
+                  if (canMarkAsCompleted)                    
+                    // Mark as Completed
                     FilledButton(
                       onPressed: thesisC.isMarkingAsCompleted
                           ? null
@@ -563,6 +600,7 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
                             )
                           : const Text('Mark as Completed'),
                     ),
+                  // -- End of Admin Only --
                 ],
               ),
             ],
@@ -614,6 +652,32 @@ class _ThesisDetailHeaderState extends State<ThesisDetailHeader> {
         widget.thesis.id,
         widget.thesis.supervisorId,
       );
+    }
+  }
+
+  Future<void> _showRejectThesisDialog() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reject Submission'),
+        content: const Text('Are you sure you want to reject this submission?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reject'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // await ThesisController.to.rejectThesis(
+      //   widget.thesis.id,
+      // );
     }
   }
 

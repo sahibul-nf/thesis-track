@@ -7,6 +7,7 @@ import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 
 enum ThesisStatus {
   unknown,
+  rejected,
   pending,
   inProgress,
   underReview,
@@ -19,6 +20,7 @@ enum ThesisStatus {
       inProgress => Colors.blue.shade400,
       underReview => Colors.purple.shade300,
       completed => Colors.green.shade400,
+      rejected => Colors.red.shade400,
       unknown => Colors.grey.shade300,
     };
   }
@@ -30,6 +32,7 @@ enum ThesisStatus {
       inProgress => 'In Progress',
       underReview => 'Under Review',
       completed => 'Completed',
+      rejected => 'Rejected',
       unknown => 'Unknown',
     };
   }
