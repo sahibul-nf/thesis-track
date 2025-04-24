@@ -13,6 +13,6 @@
             "type": "dart",
             "flutterMode": "debug",
             "args": ["--web-port", "5000"]
-        }
+        },      
     ]
 }
