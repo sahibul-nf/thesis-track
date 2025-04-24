@@ -31,7 +31,8 @@ class User {
   final UserRole role;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final dynamic data;
+  final StudentData? studentData;
+  final LecturerData? lecturerData;
 
   User({
     required this.id,
@@ -40,33 +41,34 @@ class User {
     required this.role,
     required this.createdAt,
     required this.updatedAt,
-    this.data,
+    this.studentData,
+    this.lecturerData,
   });
 
   factory User.fromJson(Map<String, dynamic> json, {String? role}) {
-    dynamic data;
+    StudentData? studentData;
+    LecturerData? lecturerData;
     if (role == 'Student') {
-      data = StudentData(
+      studentData = StudentData(
         nim: json['nim'] as String,
         year: json['year'] as String,
       );
     } else if (role == 'Lecture') {
-      data = LecturerData(
+      lecturerData = LecturerData(
         nidn: json['nidn'] as String,
         totalThesisSupervised: json['total_thesis_supervised'] as int,
         totalThesisExamined: json['total_thesis_examined'] as int,
         onTrackThesisCount: json['on_track_thesis_count'] as int,
       );
-    } else if (role == 'Admin') {
-      data = null;
-    }    
+    }
 
     return User(
       id: json['id'] as String,
       name: json['name'] as String,
       email: json['email'] as String,
       role: UserRole.fromString(role) ?? UserRole.student,
-      data: data,
+      studentData: studentData,
+      lecturerData: lecturerData,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -77,12 +79,12 @@ class User {
     String? nidn;
     String? year;
     if (role == UserRole.student) {
-      var studentData = data as StudentData;
-      nim = studentData.nim;
-      year = studentData.year;
+      var studentData = this.studentData;
+      nim = studentData?.nim;
+      year = studentData?.year;
     } else if (role == UserRole.lecturer) {
-      var lecturerData = data as LecturerData;
-      nidn = lecturerData.nidn;
+      var lecturerData = this.lecturerData;
+      nidn = lecturerData?.nidn;
     }
 
     return {
@@ -103,7 +105,8 @@ class User {
     String? name,
     String? email,
     UserRole? role,
-    dynamic data,
+    StudentData? studentData,
+    LecturerData? lecturerData,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -112,7 +115,8 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
-      data: data ?? this.data,
+      studentData: studentData ?? this.studentData,
+      lecturerData: lecturerData ?? this.lecturerData,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

@@ -421,7 +421,16 @@ class ThesisController extends GetxController {
   // Get unique years from theses
   List<String?> get availableYears {
     List<String?> years =
-        allTheses.map((thesis) => (thesis.student.data as StudentData).year).toSet().toList();
+        allTheses
+        .map((thesis) {
+          if (thesis.student.role == UserRole.student &&
+              thesis.student.studentData != null) {
+            return thesis.student.studentData?.year;
+          }
+          return null;
+        })
+        .toSet()
+        .toList();
     years.sort((a, b) => b!.compareTo(a!));
     return years;
   }
@@ -440,7 +449,7 @@ class ThesisController extends GetxController {
 
       // Apply year filter if selected
       final matchesYear =
-          selectedYear.isEmpty || (thesis.student.data as StudentData).year == selectedYear;
+          selectedYear.isEmpty || (thesis.student.studentData?.year ?? '') == selectedYear;
 
       return isActive && matchesYear;
     }).toList();

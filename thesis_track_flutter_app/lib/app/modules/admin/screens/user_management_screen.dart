@@ -252,7 +252,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                             const Icon(Iconsax.archive_tick,
                                                 size: 16),
                                             Text(
-                                              '${(user.data as LecturerData).totalThesisSupervised}',
+                                              '${(user.lecturerData?.totalThesisSupervised ?? 0)}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall,
@@ -295,7 +295,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                             const Icon(Iconsax.teacher,
                                                 size: 16),
                                             Text(
-                                              '${(user.data as LecturerData).totalThesisExamined}',
+                                              '${(user.lecturerData?.totalThesisExamined ?? 0)}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall,
@@ -337,7 +337,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                           children: [
                                             const Icon(Iconsax.flash, size: 16),
                                             Text(
-                                              '${(user.data as LecturerData).onTrackThesisCount}',
+                                              '${(user.lecturerData?.onTrackThesisCount ?? 0)}',
                                               style: Theme.of(context)
                                                   .textTheme
                                                   .bodySmall,

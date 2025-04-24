@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:thesis_track_flutter_app/app/data/models/thesis_model.dart';
-import 'package:thesis_track_flutter_app/app/data/models/user_model.dart';
 import 'package:thesis_track_flutter_app/app/modules/auth/controllers/auth_controller.dart';
 import 'package:thesis_track_flutter_app/app/modules/thesis/controllers/thesis_controller.dart';
 import 'package:thesis_track_flutter_app/app/routes/app_routes.dart';
@@ -176,7 +175,7 @@ class TopProgressListView extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  (thesis.student.data as StudentData).year,
+                                  thesis.student.studentData?.year ?? '',
                                   style: theme.textTheme.labelSmall?.copyWith(
                                     color: theme.colorScheme.onSurfaceVariant,
                                   ),
