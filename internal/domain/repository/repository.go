@@ -64,6 +64,7 @@ type ThesisLectureRepository interface {
 	FindByThesisID(ctx context.Context, thesisID uuid.UUID) ([]entity.ThesisLecture, error)
 	FindByLectureID(ctx context.Context, lectureID uuid.UUID) ([]entity.ThesisLecture, error)
 	FindByThesisAndLecture(ctx context.Context, thesisID, lectureID uuid.UUID) (*entity.ThesisLecture, error)
+	FindAll(ctx context.Context) ([]entity.ThesisLecture, error)
 } 
 
 type CommentRepository interface {

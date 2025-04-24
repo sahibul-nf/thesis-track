@@ -87,3 +87,16 @@ func (r *thesisLectureRepository) FindByThesisAndLecture(ctx context.Context, th
 	}
 	return &thesisLecture, nil
 }
+
+func (r *thesisLectureRepository) FindAll(ctx context.Context) ([]entity.ThesisLecture, error) {
+	var thesisLectures []entity.ThesisLecture
+	err := r.db.WithContext(ctx).
+		Preload("Thesis").
+		Preload("Thesis.Student").
+		Preload("Lecture").
+		Find(&thesisLectures).Error
+	if err != nil {
+		return nil, err
+	}
+	return thesisLectures, nil
+}

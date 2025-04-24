@@ -28,38 +28,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _updateUserRole(User user, String newRole) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Update User Role'),
-        content: Text(
-          'Are you sure you want to change ${user.name}\'s role to $newRole?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Update'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed == true) {
-      await _adminController.updateUserRole(
-        userId: user.id,
-        role: newRole,
-      );
-
-      await _adminController.getAllUsers();
-    }
-  }
+  }  
 
   Future<void> _deleteUser(User user) async {
     final confirmed = await showDialog<bool>(
@@ -86,8 +55,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     );
 
     if (confirmed == true) {
-      await _adminController.deleteUser(user.id);
-      await _adminController.getAllUsers();
+      await _adminController.deleteUser(user);
     }
   }
 
@@ -219,100 +187,202 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       foregroundColor: user.role.color,
                       child: Text(user.name[0].toUpperCase()),
                     ),
-                    title: Text(
-                      user.name,
-                      style: Theme.of(context).textTheme.titleSmall,
-                    ),
-                    subtitle: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    title: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          user.email,
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                        SizedBox(height: AppTheme.spaceSM),
-                        Wrap(
-                          spacing: 8,
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: AppTheme.spaceSM,
-                                vertical: AppTheme.spaceXS,
-                              ),
-                              decoration: BoxDecoration(
-                                color: user.role.color.withOpacity(0.1),
-                                borderRadius:
-                                    BorderRadius.circular(AppTheme.chipRadius),
-                              ),
-                              child: Text(
-                                user.role.name,
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .labelSmall
-                                    ?.copyWith(
-                                      color: user.role.color,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
+                            Text(
+                              user.name,
+                              style: Theme.of(context).textTheme.titleSmall,
                             ),
-                            if (user.department != null &&
-                                user.department!.isNotEmpty)
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: AppTheme.spaceSM,
-                                  vertical: AppTheme.spaceXS,
+                            Row(
+                              children: [
+                                Text(
+                                  '${user.email} • ',
+                                  style: Theme.of(context).textTheme.bodySmall,
                                 ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .secondary
-                                      .withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(
-                                      AppTheme.chipRadius),
-                                ),
-                                child: Text(
-                                  user.department!,
+                                Text(
+                                  user.role.name,
                                   style: Theme.of(context)
                                       .textTheme
                                       .labelSmall
                                       ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .secondary,
+                                        color: user.role.color,
                                         fontWeight: FontWeight.w600,
                                       ),
                                 ),
-                              )
+                              ],
+                            ),
                           ],
+                        ),
+                        // --- Lecturer Stats ---
+                        if (user.role == UserRole.lecturer)
+                          Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppTheme.spaceMD,
+                            ),
+                            child: Row(
+                              spacing: 16,
+                              children: [
+                                // Total Theses Supervised
+                                Tooltip(
+                                  message: 'Total Theses Supervised',
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppTheme.spaceMD,
+                                      horizontal: AppTheme.spaceSM,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(
+                                          AppTheme.cardRadius),
+                                    ),
+                                    child: Column(
+                                      spacing: 4,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          spacing: 4,
+                                          children: [
+                                            const Icon(Iconsax.archive_tick,
+                                                size: 16),
+                                            Text(
+                                              '${(user.data as LecturerData).totalThesisSupervised}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          'Supervised',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // --- Total Theses Examined ---
+                                Tooltip(
+                                  message: 'Total Theses Examined',
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppTheme.spaceMD,
+                                      horizontal: AppTheme.spaceSM,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary
+                                          .withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(
+                                          AppTheme.cardRadius),
+                                    ),
+                                    child: Column(
+                                      spacing: 4,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          spacing: 4,
+                                          children: [
+                                            const Icon(Iconsax.teacher,
+                                                size: 16),
+                                            Text(
+                                              '${(user.data as LecturerData).totalThesisExamined}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          'Examined',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                // --- On Track Theses ---
+                                Tooltip(
+                                  message: 'On Track Theses Supervised',
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: AppTheme.spaceMD,
+                                      horizontal: AppTheme.spaceSM,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondary
+                                          .withOpacity(0.05),
+                                      borderRadius: BorderRadius.circular(
+                                          AppTheme.cardRadius),
+                                    ),
+                                    child: Column(
+                                      spacing: 4,
+                                      children: [
+                                        Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          spacing: 4,
+                                          children: [
+                                            const Icon(Iconsax.flash, size: 16),
+                                            Text(
+                                              '${(user.data as LecturerData).onTrackThesisCount}',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodySmall,
+                                            ),
+                                          ],
+                                        ),
+                                        Text(
+                                          'On Track',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .labelSmall,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                         ),
                       ],
                     ),
                     trailing: PopupMenuButton<String>(
                       iconColor: Theme.of(context).colorScheme.outlineVariant,
                       itemBuilder: (context) => [
-                        if (user.role != UserRole.admin) ...[
-                          PopupMenuItem(
-                            value: UserRole.student.name,
-                            enabled: user.role != UserRole.student,
-                            child: const Text('Create Student'),
-                          ),
-                          PopupMenuItem(
-                            value: UserRole.lecturer.name,
-                            enabled: user.role != UserRole.lecturer,
-                            child: const Text('Create Lecturer'),
-                          ),
-                          const PopupMenuDivider(),
-                        ],
-                        const PopupMenuItem(
+                        PopupMenuItem(
                           value: 'delete',
-                          child: Text('Delete'),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppTheme.spaceSM,
+                          ),
+                          height: 30,
+                          child: Row(
+                            children: [
+                              const Icon(Iconsax.trash, size: 16),
+                              SizedBox(width: AppTheme.spaceSM),
+                              Text(
+                                'Delete',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                       onSelected: (value) {
                         if (value == 'delete') {
                           _deleteUser(user);
-                        } else {
-                          _updateUserRole(user, value);
                         }
                       },
                     ),
@@ -324,6 +394,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
             );
           }),
         ),
+        SizedBox(height: AppTheme.spaceLG),
       ],
     );
   }

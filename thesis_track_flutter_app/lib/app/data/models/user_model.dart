@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 enum UserRole {
-  student('Student', Color(0xFF2196F3)), // Bright blue for students - learning/growth
-  lecturer('Lecture', Color(0xFF009688)), // Teal for lecturers - wisdom/teaching
+  student('Student',
+      Color(0xFF2196F3)), // Bright blue for students - learning/growth
+  lecturer(
+      'Lecture', Color(0xFF009688)), // Teal for lecturers - wisdom/teaching
   admin(
       'Admin', Color(0xFF673AB7)), // Deep purple for admins - authority/control
   supervisor('Supervisor',
@@ -17,9 +19,8 @@ enum UserRole {
 
   static UserRole? fromString(String? role) {
     if (role == null) return null;
-    return UserRole.values.firstWhere(
-      (e) => e.name.toLowerCase() == role.toLowerCase()
-    );
+    return UserRole.values
+        .firstWhere((e) => e.name.toLowerCase() == role.toLowerCase());
   }
 }
 
@@ -28,42 +29,62 @@ class User {
   final String name;
   final String email;
   final UserRole role;
-  final String? nim;
-  final String? nidn;
-  final String? department;
-  final String? year;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final dynamic data;
 
   User({
     required this.id,
     required this.name,
     required this.email,
     required this.role,
-    this.nim,
-    this.nidn,
-    required this.department,
-    this.year,
     required this.createdAt,
     required this.updatedAt,
+    this.data,
   });
 
   factory User.fromJson(Map<String, dynamic> json, {String? role}) {
+    dynamic data;
+    if (role == 'Student') {
+      data = StudentData(
+        nim: json['nim'] as String,
+        year: json['year'] as String,
+      );
+    } else if (role == 'Lecture') {
+      data = LecturerData(
+        nidn: json['nidn'] as String,
+        totalThesisSupervised: json['total_thesis_supervised'] as int,
+        totalThesisExamined: json['total_thesis_examined'] as int,
+        onTrackThesisCount: json['on_track_thesis_count'] as int,
+      );
+    } else if (role == 'Admin') {
+      data = null;
+    }    
+
     return User(
       id: json['id'] as String,
       name: json['name'] as String,
       email: json['email'] as String,
       role: UserRole.fromString(role) ?? UserRole.student,
-      nim: json['nim'] as String?,
-      nidn: json['nidn'] as String?,
-      department: json['department'] as String?,
-      year: json['year'] as String?,
+      data: data,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
 
   Map<String, dynamic> toJson() {
+    String? nim;
+    String? nidn;
+    String? year;
+    if (role == UserRole.student) {
+      var studentData = data as StudentData;
+      nim = studentData.nim;
+      year = studentData.year;
+    } else if (role == UserRole.lecturer) {
+      var lecturerData = data as LecturerData;
+      nidn = lecturerData.nidn;
+    }
+
     return {
       'id': id,
       'name': name,
@@ -71,7 +92,6 @@ class User {
       'role': role.name,
       'nim': nim,
       'nidn': nidn,
-      'department': department,
       'year': year,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -83,10 +103,7 @@ class User {
     String? name,
     String? email,
     UserRole? role,
-    String? nim,
-    String? nidn,
-    String? department,
-    String? year,
+    dynamic data,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -95,12 +112,55 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
-      nim: nim ?? this.nim,
-      nidn: nidn ?? this.nidn,
-      department: department ?? this.department,
-      year: year ?? this.year,
+      data: data ?? this.data,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+}
+
+class StudentData {
+  final String nim;
+  final String year;
+
+  StudentData({required this.nim, required this.year});
+
+  StudentData copyWith({
+    String? nim,
+    String? year,
+  }) {
+    return StudentData(
+      nim: nim ?? this.nim,
+      year: year ?? this.year,
+    );
+  }
+}
+
+class LecturerData {
+  final String nidn;
+  final int totalThesisSupervised;
+  final int totalThesisExamined;
+  final int onTrackThesisCount;
+
+  LecturerData({
+    required this.nidn,
+    required this.totalThesisSupervised,
+    required this.totalThesisExamined,
+    required this.onTrackThesisCount,
+  });
+
+  LecturerData copyWith({
+    String? nidn,
+    int? totalThesisSupervised,
+    int? totalThesisExamined,
+    int? onTrackThesisCount,
+  }) {
+    return LecturerData(
+      nidn: nidn ?? this.nidn,
+      totalThesisSupervised:
+          totalThesisSupervised ?? this.totalThesisSupervised,
+      totalThesisExamined: totalThesisExamined ?? this.totalThesisExamined,
+      onTrackThesisCount: onTrackThesisCount ?? this.onTrackThesisCount,
     );
   }
 }

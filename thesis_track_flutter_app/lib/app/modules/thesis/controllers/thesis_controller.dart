@@ -25,7 +25,6 @@ final mockOtherTheses = [
       name: 'John Doe',
       email: 'john.doe@example.com',
       role: UserRole.student,
-      department: 'Department 1',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ),
@@ -34,7 +33,6 @@ final mockOtherTheses = [
       name: 'Jane Doe',
       email: 'jane.doe@example.com',
       role: UserRole.lecturer,
-      department: 'Department 1',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ),
@@ -45,7 +43,6 @@ final mockOtherTheses = [
           name: 'John Doe',
           email: 'john.doe@example.com',
           role: UserRole.lecturer,
-          department: 'Department 1',
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ),
@@ -81,7 +78,6 @@ final mockOtherTheses = [
       name: 'Alice Smith',
       email: 'alice.smith@example.com',
       role: UserRole.student,
-      department: 'Department 2',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ),
@@ -90,7 +86,6 @@ final mockOtherTheses = [
       name: 'Jane Doe',
       email: 'jane.doe@example.com',
       role: UserRole.lecturer,
-      department: 'Department 1',
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     ),
@@ -425,8 +420,8 @@ class ThesisController extends GetxController {
 
   // Get unique years from theses
   List<String?> get availableYears {
-    final years =
-        allTheses.map((thesis) => thesis.student.year).toSet().toList();
+    List<String?> years =
+        allTheses.map((thesis) => (thesis.student.data as StudentData).year).toSet().toList();
     years.sort((a, b) => b!.compareTo(a!));
     return years;
   }
@@ -445,7 +440,7 @@ class ThesisController extends GetxController {
 
       // Apply year filter if selected
       final matchesYear =
-          selectedYear.isEmpty || thesis.student.year == selectedYear;
+          selectedYear.isEmpty || (thesis.student.data as StudentData).year == selectedYear;
 
       return isActive && matchesYear;
     }).toList();

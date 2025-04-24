@@ -14,6 +14,7 @@ type adminService struct {
 	adminRepo    repository.AdminRepository
 	studentRepo  repository.StudentRepository
 	lectureRepo  repository.LectureRepository
+	thesisLectureRepo repository.ThesisLectureRepository
 	thesisRepo   repository.ThesisRepository
 	supabase     *supabase.Client
 }
@@ -23,6 +24,7 @@ func NewAdminService(
 	studentRepo repository.StudentRepository,
 	lectureRepo repository.LectureRepository,
 	thesisRepo repository.ThesisRepository,
+	thesisLectureRepo repository.ThesisLectureRepository,
 	supabase *supabase.Client,
 ) *adminService {
 	return &adminService{
@@ -30,6 +32,7 @@ func NewAdminService(
 		studentRepo:  studentRepo,
 		lectureRepo:  lectureRepo,
 		thesisRepo:   thesisRepo,
+		thesisLectureRepo: thesisLectureRepo,
 		supabase:     supabase,
 	}
 }
@@ -59,12 +62,37 @@ func (s *adminService) GetAllUsers(ctx context.Context) ([]entity.Student, []ent
 	if err != nil {
 		return nil, nil, err
 	}
-	lectures, err := s.lectureRepo.FindAll(ctx)
+	
+	allLectures, err := s.lectureRepo.FindAll(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	return students, lectures, nil
+	// get all thesis lectures
+	thesisLectures, err := s.thesisLectureRepo.FindAll(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	// update stats
+	for i := range allLectures {
+		for _, thesisLecture := range thesisLectures {
+			if allLectures[i].ID == thesisLecture.LectureID {				
+				if thesisLecture.Role == entity.SupervisorRole {
+					allLectures[i].TotalThesisSupervised++
+				} else if thesisLecture.Role == entity.ExaminerRole {
+					allLectures[i].TotalThesisExamined++
+				}
+
+				// check if the thesis is on track
+				if thesisLecture.Thesis.Status != entity.ThesisCompleted {
+					allLectures[i].OnTrackThesisCount++
+				}
+			}
+		}
+	}
+
+	return students, allLectures, nil
 }
 // Admin specific operations
 func (s *adminService) CreateStudent(ctx context.Context, student *entity.Student) error {

@@ -42,7 +42,6 @@ type Student struct {
 	Name       string         `json:"name"`
 	NIM        string         `json:"nim" gorm:"unique"`
 	Email      string         `json:"email"`
-	Department string         `json:"department"`
 	Year       string         `json:"year"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
@@ -54,10 +53,14 @@ type Lecture struct {
 	Name       string         `json:"name"`
 	NIDN       string         `json:"nidn" gorm:"unique"`
 	Email      string         `json:"email"`
-	Department string         `json:"department"`
 	CreatedAt  time.Time      `json:"created_at"`
 	UpdatedAt  time.Time      `json:"updated_at"`
 	DeletedAt  gorm.DeletedAt `json:"-" gorm:"index"`
+
+	// Stats
+	TotalThesisSupervised int `json:"total_thesis_supervised" gorm:"-"`
+	TotalThesisExamined  int `json:"total_thesis_examined" gorm:"-"`
+	OnTrackThesisCount   int `json:"on_track_thesis_count" gorm:"-"`
 }
 
 type Admin struct {

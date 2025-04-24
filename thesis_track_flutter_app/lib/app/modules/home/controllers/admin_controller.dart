@@ -164,14 +164,14 @@ class AdminController extends GetxController {
     }
   }
 
-  Future<String?> deleteUser(String userId) async {
+  Future<String?> deleteUser(User user) async {
     try {
       _isUserLoading.value = true;
-      final result = await _adminRepository.deleteUser(userId);
+      final result = await _adminRepository.deleteUser(user.id);
       return result.fold(
         (failure) => failure.message,
         (_) {
-          _users.value.removeWhere((u) => u.id == userId);
+          _users.value.removeWhere((u) => u.id == user.id);
           return null;
         },
       );

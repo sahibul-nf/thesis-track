@@ -169,7 +169,6 @@ func (s *authService) Register(ctx context.Context, registerData *dto.RegisterRe
 			Email: registerData.Email,
 			Name:  registerData.Name,
 			NIM:   registerData.NIM,
-			Department: registerData.Department,
 			Year: registerData.Year,			
 		}
 		err = s.studentRepo.Create(ctx, &studentData)
@@ -192,7 +191,6 @@ func (s *authService) Register(ctx context.Context, registerData *dto.RegisterRe
 			Email: registerData.Email,
 			Name:  registerData.Name,
 			NIDN: registerData.NIDN,		
-			Department: registerData.Department,
 		}
 		err = s.lectureRepo.Create(ctx, &lectureData)
 		if err != nil {
