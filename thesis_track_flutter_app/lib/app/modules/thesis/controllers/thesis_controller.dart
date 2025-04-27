@@ -318,6 +318,12 @@ class ThesisController extends GetxController {
     Thesis thesis,
     ThesisLecture thesisLecture,
   ) async {
+    // Maximum allowed supervised thesis is 20
+    int onTrackSupervised = thesisLecture.user.lecturerData?.onTrackThesisCount ?? 0;
+    if (onTrackSupervised >= 20) {
+      return "This lecturer has reached the maximum limit of 20 ongoing thesis supervisions. Please select another available lecturer.";
+    }
+
     try {
       _isAssigningSupervisor.value = true;
       final result = await _thesisRepository.assignSupervisor(
